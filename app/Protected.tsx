@@ -4,6 +4,7 @@ import React, { ReactElement, useEffect, useState } from "react";
 import Loading from "./loading";
 import { useUserStore } from "@/store/user";
 import { useRouter } from "next/navigation";
+import { initializeAuthState, clearAuthState } from "@/lib/api";
 
 export default function Protected({
   children,
@@ -17,24 +18,47 @@ export default function Protected({
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLogged) router.push("/signin");
+    if (!isLogged) {
+      clearAuthState();
+      router.push("/signin");
+      return;
+    }
+
     const refreshUserCredentials = async () => {
       try {
         if (!isLogged) return;
+        console.log("Fetching user credentials from /api/me...");
         const res = await fetch("/api/me");
+        console.log("Response status:", res.status);
         const data = await res.json();
+        console.log("Response data:", data);
 
-        if (!data.ok) throw new Error("error refreshing token.");
-        if (!data.user) throw new Error("Error refreshing user.");
-        console.log(data.user);
+        if (!data.ok) {
+          console.error("Token refresh failed:", data.message);
+          clearAuthState();
+          throw new Error("error refreshing token.");
+        }
+        if (!data.user) {
+          console.error("No user data in response");
+          clearAuthState();
+          throw new Error("Error refreshing user.");
+        }
+        console.log("User data loaded successfully:", data.user);
         setUser(data.user);
+        // Initialize auth state in localStorage for token refresh tracking
+        initializeAuthState(data.user);
+        // Set mounted to true after successful refresh
+        console.log("Setting isMounted to true");
+        setIsMounted(true);
       } catch (err: any) {
-        console.error(err.message);
+        console.error("Error in refreshUserCredentials:", err.message);
+        // Clear auth state and redirect to login on error
+        clearAuthState();
+        router.push("/signin");
       }
     };
     refreshUserCredentials();
-    setTimeout(() => setIsMounted(true), 2000);
-  }, []);
+  }, [isLogged, router, setUser]);
   if (!isMounted) return <Loading />;
   return <div>{children}</div>;
 }

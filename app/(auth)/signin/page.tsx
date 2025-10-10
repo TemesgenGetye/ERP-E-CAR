@@ -21,6 +21,7 @@ import { useForm } from "react-hook-form";
 import { signin } from "@/lib/auth/signin";
 import { useUserStore } from "@/store/user";
 import { useRouter } from "next/navigation";
+import { initializeAuthState } from "@/lib/api";
 
 export default function SignIn() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -38,6 +39,7 @@ export default function SignIn() {
       const user = await signin(data);
       if (!user.access) throw new Error("Error trying to log you in");
       setUser(user.user);
+      initializeAuthState(user.user);
       router.push("/");
       data;
     } catch (err: any) {

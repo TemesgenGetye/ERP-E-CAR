@@ -15,7 +15,9 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { clearAuthState } from "@/lib/api";
+import { useUserStore } from "@/store/user";
 
 export default function Sidebar() {
   const links = [
@@ -24,7 +26,24 @@ export default function Sidebar() {
     // { label: "Users", href: "/users", icon: Users },
   ];
   const pathName = usePathname();
+  const router = useRouter();
+  const { clearUser } = useUserStore();
   const isAuthPage = pathName.includes("signin") || pathName.includes("signup");
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+      clearAuthState();
+      clearUser();
+      router.push("/signin");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      clearAuthState();
+      clearUser();
+      router.push("/signin");
+    }
+  };
+
   if (isAuthPage) return null;
   return (
     <aside
@@ -65,7 +84,10 @@ export default function Sidebar() {
         >
           <Settings className="size-5" />
         </Link>
-        <button className="text-black hover:bg-black hover:text-white cursor-pointer size-10 rounded-full grid place-items-center">
+        <button
+          onClick={handleLogout}
+          className="text-black hover:bg-black hover:text-white cursor-pointer size-10 rounded-full grid place-items-center"
+        >
           <LogOut className="size-5" />
         </button>
       </div>

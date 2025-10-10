@@ -1,11 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Plus, Save, X } from "lucide-react";
+import { ArrowLeft, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-
+import {Plus} from "lucid-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,39 +20,63 @@ import { useToast } from "@/components/ui/use-toast";
 import { Label } from "@/components/ui/label";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useCarData } from "@/hooks/useCarData";
+import { useRouter } from "next/navigation";
 
 // ----------------------
 // Form schema
 // ----------------------
 const carFormSchema = z.object({
-  title: z.string().min(2, "Title is required"),
-  make: z.string().min(2, "Make is required"),
-  model: z.string().min(1, "Model is required"),
+  make_ref: z.number().min(1, "Make is required"),
+  model_ref: z.number().min(1, "Model is required"),
   year: z.string().min(4, "Year is required"),
   mileage: z.string().min(1, "Mileage is required"),
-  condition: z.string().min(1, "Condition is required"),
+  condition: z.enum(["new", "used"], {
+    required_error: "Condition is required",
+  }),
   price: z.string().min(1, "Price is required"),
-  currency: z.string().min(1, "Currency is required"),
-  fuelType: z.string().min(1, "Fuel type is required"),
+  fuel_type: z.enum(["electric", "hybrid", "petrol", "diesel"], {
+    required_error: "Fuel type is required",
+  }),
   transmission: z.string().min(1, "Transmission is required"),
   engine: z.string().min(1, "Engine info is required"),
-  driveType: z.string().min(1, "Drive type is required"),
-  bodyType: z.string().min(1, "Body type is required"),
+  drivetrain: z.enum(["fwd", "rwd", "awd", "4wd"], {
+    required_error: "Drive type is required",
+  }),
+  body_type: z.enum(
+    [
+      "sedan",
+      "suv",
+      "truck",
+      "coupe",
+      "hatchback",
+      "convertible",
+      "wagon",
+      "van",
+      "other",
+    ],
+    {
+      required_error: "Body type is required",
+    }
+  ),
   location: z.string().min(1, "Location is required"),
-  vin: z.string().optional(),
-  exteriorColor: z.string().optional(),
-  interiorColor: z.string().optional(),
-  doors: z.string().optional(),
-  seats: z.string().optional(),
-  owners: z.string().optional(),
-  serviceHistory: z.string().optional(),
-  accidentHistory: z.string().optional(),
-  registration: z.string().optional(),
-  insurance: z.string().optional(),
-  warranty: z.string().optional(),
-  features: z.string().optional(),
-  images: z.array(z.any()).optional(),
+  exterior_color: z.string().min(1, "Exterior color is required"),
+  interior_color: z.string().min(1, "Interior color is required"),
+  description: z.string().optional(),
+  trim: z.string().optional(),
+  sale_type: z.enum(["fixed_price", "auction"]).default("fixed_price"),
+  status: z
+    .enum([
+      "available",
+      "reserved",
+      "sold",
+      "pending_inspection",
+      "under_maintenance",
+      "delivered",
+      "archived",
+    ])
+    .default("available"),
 });
 
 type CarFormValues = z.infer<typeof carFormSchema>;
@@ -259,7 +283,6 @@ export default function CarForm() {
           cols={7}
           rows={7}
           className="columns-7 rows-7"
-
         />
       </section>
 

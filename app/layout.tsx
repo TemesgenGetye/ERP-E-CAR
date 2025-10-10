@@ -18,9 +18,14 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const isLogged = !!cookieStore.get("access")?.value;
-  console.log(cookieStore.get("access")?.value);
-  console.log("authenticated", isLogged);
+  // Check for either access token OR refresh token
+  // If user has refresh token, they can get a new access token
+  const hasAccessToken = !!cookieStore.get("access")?.value;
+  const hasRefreshToken = !!cookieStore.get("refresh")?.value;
+  const isLogged = hasAccessToken || hasRefreshToken;
+  console.log("Access token:", hasAccessToken);
+  console.log("Refresh token:", hasRefreshToken);
+  console.log("Is logged in:", isLogged);
 
   return (
     <html lang="en">

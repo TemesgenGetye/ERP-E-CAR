@@ -48,6 +48,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 export default function page() {
   const metrics = [
@@ -99,6 +100,10 @@ export default function page() {
     { segment: "BYD", value: 45, color: "black" },
     { segment: "Hyundai", value: 20, color: "#222" },
   ];
+
+  const { analytics, isLoading, error } = useAnalytics();
+
+  console.log("analytics", analytics);
 
   return (
     <div className="min-h-screen">
