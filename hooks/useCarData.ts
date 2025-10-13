@@ -16,7 +16,6 @@ export function useCarData() {
   const fetchFilteredCars = useCarStore((state) => state.fetchFilteredCars);
 
   useEffect(() => {
-    // Fetch makes on mount if not already loaded
     if (makes.length === 0) {
       fetchMakes();
     }
@@ -37,4 +36,3 @@ export function useCarData() {
     fetchFilteredCars,
   };
 }
-

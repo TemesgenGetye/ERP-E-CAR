@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import { create } from "zustand";
+import { Car } from "@/types";
 
 export interface Make {
   id: number;
@@ -10,26 +11,6 @@ export interface Model {
   id: number;
   name: string;
   make?: Make;
-}
-
-export interface Car {
-  id: number;
-  make: string;
-  model: string;
-  year: number;
-  price: string;
-  mileage: number;
-  fuel_type: string;
-  body_type: string;
-  exterior_color: string;
-  interior_color: string;
-  engine: string;
-  drivetrain: string;
-  condition: string;
-  description: string;
-  status: string;
-  location: string;
-  // Add other fields as needed
 }
 
 interface CarState {
@@ -67,7 +48,7 @@ export const useCarStore = create<CarState>((set) => ({
   fetchCars: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api<Car[]>("/inventory/cars/", {
+      const res = await api<Car[]>("/inventory/user-cars/", {
         method: "GET",
       });
       set({ cars: res, isLoading: false });
@@ -79,7 +60,7 @@ export const useCarStore = create<CarState>((set) => ({
   fetchCarById: async (id: string) => {
     set({ car: null, isLoading: true, error: null });
     try {
-      const res = await api<Car>(`/inventory/cars/${id}`, {
+      const res = await api<Car>(`/inventory/user-cars/${id}`, {
         method: "GET",
       });
       set({ car: res, isLoading: false });
@@ -158,4 +139,3 @@ export const useCarStore = create<CarState>((set) => ({
     }
   },
 }));
-

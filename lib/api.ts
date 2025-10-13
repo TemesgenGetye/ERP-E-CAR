@@ -127,10 +127,29 @@ function shouldRefreshTokens(): boolean {
 let isRefreshing = false;
 let refreshPromise: Promise<any> | null = null;
 
+// Helper function to get access token from server
+async function getAccessToken(): Promise<string | null> {
+  try {
+    const response = await fetch("/api/token", {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.ok && data.access) {
+        return data.access;
+      }
+    }
+  } catch (error) {
+    console.error("Failed to get access token:", error);
+  }
+  return null;
+}
+
 export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   const { headers, body, skipAuth, ...rest } = opts;
 
-  // Check if we should refresh tokens proactively (every 10 minutes)
   if (!skipAuth && shouldRefreshTokens() && !isRefreshing) {
     console.log("Token refresh needed, refreshing proactively...");
     isRefreshing = true;
@@ -145,29 +164,28 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
       refreshPromise = null;
     }
   }
-
-  // If a refresh is in progress, wait for it
   if (isRefreshing && refreshPromise) {
     await refreshPromise;
   }
 
-  // First attempt with current token (cookies are sent automatically)
+  const accessToken = skipAuth ? null : await getAccessToken();
+
   const isFormData = body instanceof FormData;
   let res = await fetch(`${API_URL}${path}`, {
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...(headers || {}),
     },
     body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
-    credentials: "include", // Important: include cookies in the request
+    credentials: "include",
     ...rest,
   });
+  console.log(headers, "headers", accessToken, "accessToken");
 
-  // If we get a 401 and haven't skipped auth, try to refresh
   if (res.status === 401 && !skipAuth) {
     console.log("Got 401, attempting token refresh...");
 
-    // Prevent multiple simultaneous refresh attempts
     if (!isRefreshing) {
       isRefreshing = true;
       refreshPromise = refreshTokens();
@@ -178,10 +196,13 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
     refreshPromise = null;
 
     if (refreshResult) {
-      // Retry the original request with refreshed cookies
+      const newAccessToken = await getAccessToken();
       res = await fetch(`${API_URL}${path}`, {
         headers: {
           ...(isFormData ? {} : { "Content-Type": "application/json" }),
+          ...(newAccessToken
+            ? { Authorization: `Bearer ${newAccessToken}` }
+            : {}),
           ...(headers || {}),
         },
         body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
@@ -189,7 +210,6 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
         ...rest,
       });
     } else {
-      // Refresh failed, redirect to login
       if (typeof window !== "undefined") {
         localStorage.removeItem("auth-tokens");
         window.location.href = "/signin";
@@ -221,7 +241,6 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   return {} as T;
 }
 
-// Helper function to initialize auth state after login
 export function initializeAuthState(user?: any) {
   if (typeof window === "undefined") return;
 
@@ -231,9 +250,7 @@ export function initializeAuthState(user?: any) {
   });
 }
 
-// Helper function to clear auth state on logout
 export function clearAuthState() {
   if (typeof window === "undefined") return;
-
   localStorage.removeItem("auth-tokens");
 }

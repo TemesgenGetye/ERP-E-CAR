@@ -103,8 +103,6 @@ export default function page() {
 
   const { analytics, isLoading, error } = useAnalytics();
 
-  console.log("analytics", analytics);
-
   return (
     <div className="min-h-screen">
       <div className="flex">
