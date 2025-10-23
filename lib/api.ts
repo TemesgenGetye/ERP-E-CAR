@@ -150,6 +150,18 @@ async function getAccessToken(): Promise<string | null> {
 export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   const { headers, body, skipAuth, ...rest } = opts;
 
+  // Check if we're on an auth page and skip auth logic
+  if (typeof window !== "undefined") {
+    const authPaths = ["/signin", "/signup", "/forgot-password", "/reset"];
+    const isAuthPage = authPaths.some((path) =>
+      window.location.pathname.startsWith(path)
+    );
+
+    if (isAuthPage && !skipAuth) {
+      throw new Error("Authentication required but on auth page");
+    }
+  }
+
   // Only attempt token refresh if we have auth state and it's not already refreshing
   if (!skipAuth && shouldRefreshTokens() && !isRefreshing) {
     console.log("Token refresh needed, refreshing proactively...");

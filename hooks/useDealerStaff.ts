@@ -1,10 +1,12 @@
 import { useDealerStaffStore } from "@/store/dealerStaff";
 import { useEffect } from "react";
+import { useAuthGuard } from "./useAuthGuard";
 
 export const useDealerStaff = () => {
   const staff = useDealerStaffStore((state) => state.staff);
   const isLoading = useDealerStaffStore((state) => state.isLoading);
   const error = useDealerStaffStore((state) => state.error);
+  const { canMakeApiCalls } = useAuthGuard();
 
   const fetchStaff = useDealerStaffStore((state) => state.fetchStaff);
   const createStaff = useDealerStaffStore((state) => state.createStaff);
@@ -13,8 +15,10 @@ export const useDealerStaff = () => {
   const getStaffById = useDealerStaffStore((state) => state.getStaffById);
 
   useEffect(() => {
-    fetchStaff();
-  }, [fetchStaff]);
+    if (canMakeApiCalls) {
+      fetchStaff();
+    }
+  }, [fetchStaff, canMakeApiCalls]);
 
   return {
     staff,

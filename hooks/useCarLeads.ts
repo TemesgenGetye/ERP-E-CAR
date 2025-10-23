@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { Lead } from "@/types";
+import { useAuthGuard } from "./useAuthGuard";
 
 interface CarLead extends Lead {
   // Additional fields that might be useful for display
@@ -12,9 +13,10 @@ export const useCarLeads = (carId: string | number | undefined) => {
   const [leads, setLeads] = useState<CarLead[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { canMakeApiCalls } = useAuthGuard();
 
   const fetchLeads = async () => {
-    if (!carId) return;
+    if (!carId || !canMakeApiCalls) return;
 
     setIsLoading(true);
     setError(null);
@@ -91,8 +93,10 @@ export const useCarLeads = (carId: string | number | undefined) => {
   };
 
   useEffect(() => {
-    fetchLeads();
-  }, [carId]);
+    if (canMakeApiCalls) {
+      fetchLeads();
+    }
+  }, [carId, canMakeApiCalls]);
 
   return {
     leads,

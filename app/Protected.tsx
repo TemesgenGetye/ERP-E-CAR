@@ -22,22 +22,25 @@ export default function Protected({
     const isAuthPath =
       pathname?.startsWith("/signin") ||
       pathname?.startsWith("/signup") ||
-      pathname?.startsWith("/forgot-password");
+      pathname?.startsWith("/forgot-password") ||
+      pathname?.startsWith("/reset");
 
-    if (!isLogged && isAuthPath) {
+    // For auth pages, just mount immediately without any auth logic
+    if (isAuthPath) {
       setIsMounted(true);
       return;
     }
 
+    // For non-auth pages, check if user is logged in
     if (!isLogged) {
       clearAuthState();
       router.push("/signin");
       return;
     }
 
+    // Only run auth refresh for logged-in users on non-auth pages
     const refreshUserCredentials = async () => {
       try {
-        if (!isLogged) return;
         console.log("Fetching user credentials from /api/me...");
         const res = await fetch("/api/me");
         console.log("Response status:", res.status);
@@ -47,19 +50,18 @@ export default function Protected({
         if (!data.ok) {
           console.error("Token refresh failed:", data.message);
           clearAuthState();
-          throw new Error("error refreshing token.");
+          router.push("/signin");
+          return;
         }
         if (!data.user) {
           console.error("No user data in response");
           clearAuthState();
-          throw new Error("Error refreshing user.");
+          router.push("/signin");
+          return;
         }
         console.log("User data loaded successfully:", data.user);
         setUser(data.user);
-
         initializeAuthState(data.user);
-
-        console.log("Setting isMounted to true");
         setIsMounted(true);
       } catch (err: any) {
         console.error("Error in refreshUserCredentials:", err.message);
@@ -69,7 +71,7 @@ export default function Protected({
     };
 
     refreshUserCredentials();
-  }, [isLogged, router, setUser]);
+  }, [isLogged, router, setUser, pathname]);
   if (!isMounted) return <Loading />;
   return <div>{children}</div>;
 }
