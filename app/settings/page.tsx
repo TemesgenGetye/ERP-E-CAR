@@ -1,19 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Camera, Info, User } from "lucide-react";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function AccountSettingsPage() {
+  const { dealer, isLoading, error, getDealer, updateDealer } = useProfile();
+
   const [formData, setFormData] = useState({
-    name: "Alemayehu Gezahegne",
-    email: "myemail@address.com",
-    password: "••••••••••",
+    company_name: "",
+    license_number: "",
+    tax_id: "",
+    telebirr_account: "",
   });
+
+  useEffect(() => {
+    getDealer();
+  }, []);
+
+  useEffect(() => {
+    if (dealer) {
+      setFormData({
+        company_name: dealer.company_name || "",
+        license_number: dealer.license_number || "",
+        tax_id: dealer.tax_id || "",
+        telebirr_account: dealer.telebirr_account || "",
+      });
+    }
+  }, [dealer]);
+
+  const isSaveDisabled = useMemo(() => {
+    if (!dealer) return true;
+    return (
+      formData.company_name === (dealer.company_name || "") &&
+      formData.license_number === (dealer.license_number || "") &&
+      formData.tax_id === (dealer.tax_id || "") &&
+      formData.telebirr_account === (dealer.telebirr_account || "")
+    );
+  }, [dealer, formData]);
+
+  const handleSave = async () => {
+    if (!dealer) return;
+    const payload: any = {};
+    if (formData.company_name !== dealer.company_name)
+      payload.company_name = formData.company_name;
+    if (formData.license_number !== dealer.license_number)
+      payload.license_number = formData.license_number;
+    if (formData.tax_id !== dealer.tax_id) payload.tax_id = formData.tax_id;
+    if (formData.telebirr_account !== dealer.telebirr_account)
+      payload.telebirr_account = formData.telebirr_account;
+    if (Object.keys(payload).length === 0) return;
+
+    await updateDealer(payload);
+  };
 
   return (
     <div className="p-6">
@@ -22,7 +66,10 @@ export default function AccountSettingsPage() {
           <h1 className="text-3xl font-bold text-black mb-2">
             Account Settings
           </h1>
-          <p className="text-gray-600">Edit your name, avatar etc.</p>
+          <p className="text-gray-600">Update your dealer profile.</p>
+          {isLoading && (
+            <p className="text-gray-500 text-sm mt-1">Loading profile...</p>
+          )}
         </div>
 
         <Card className="border border-gray-200">
@@ -32,63 +79,80 @@ export default function AccountSettingsPage() {
               <div className="lg:col-span-2 space-y-6">
                 <div className="space-y-2">
                   <Label
-                    htmlFor="name"
+                    htmlFor="company_name"
                     className="text-sm font-medium text-black"
                   >
-                    Your Name
+                    Company Name
                   </Label>
                   <Input
-                    id="name"
-                    value={formData.name}
+                    id="company_name"
+                    value={formData.company_name}
                     onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
+                      setFormData({ ...formData, company_name: e.target.value })
                     }
+                    disabled={isLoading}
                     className="border-gray-200 focus:border-black focus:ring-black py-8"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label
-                    htmlFor="email"
+                    htmlFor="license_number"
                     className="text-sm font-medium text-black"
                   >
-                    Email Address
+                    License Number
                   </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                      className="border-gray-200 focus:border-black focus:ring-black py-8"
-                    />
-                  </div>
+                  <Input
+                    id="license_number"
+                    value={formData.license_number}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        license_number: e.target.value,
+                      })
+                    }
+                    disabled={isLoading}
+                    className="border-gray-200 focus:border-black focus:ring-black py-8"
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label
-                    htmlFor="password"
+                    htmlFor="tax_id"
                     className="text-sm font-medium text-black"
                   >
-                    Password
+                    Tax ID
                   </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="password"
-                      type="password"
-                      value={formData.password}
-                      readOnly
-                      className="border-gray-200 bg-gray-50 py-8"
-                    />
-                    <Button
-                      variant="ghost"
-                      className="text-blue-500 hover:text-blue-600"
-                    >
-                      Change
-                    </Button>
-                  </div>
+                  <Input
+                    id="tax_id"
+                    value={formData.tax_id}
+                    onChange={(e) =>
+                      setFormData({ ...formData, tax_id: e.target.value })
+                    }
+                    disabled={isLoading}
+                    className="border-gray-200 focus:border-black focus:ring-black py-8"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="telebirr_account"
+                    className="text-sm font-medium text-black"
+                  >
+                    Telebirr Account
+                  </Label>
+                  <Input
+                    id="telebirr_account"
+                    value={formData.telebirr_account}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        telebirr_account: e.target.value,
+                      })
+                    }
+                    disabled={isLoading}
+                    className="border-gray-200 focus:border-black focus:ring-black py-8"
+                  />
                 </div>
               </div>
 
@@ -105,34 +169,37 @@ export default function AccountSettingsPage() {
               </div>
             </div>
 
-            {/* Delete Account Section */}
-            <div className="mt-12 pt-8 border-t border-gray-200">
-              <Button className="text-red-500 mb-2 bg-gray-100 hover:bg-gray-200 cursor-pointer">
-                Delete account
-              </Button>
-              {/* <p className="text-gray-600 text-sm mb-1">
-                You will receive an email to confirm your decision.
-              </p>*/}
-              <div className="flex items-center jusify-between gap-2">
-                <span>
-                  <Info size={18} className="" />
-                </span>
-                <p className="text-gray-600 text-sm ">
-                  Please note, that all your data will be permanently erased.
-                </p>
+            {/* Save helper text */}
+            {error ? (
+              <div className="mt-12 pt-8 border-t border-red-200">
+                <div className="text-red-600 text-sm">{error}</div>
               </div>
-            </div>
+            ) : null}
 
             {/* Action Buttons */}
             <div className="flex gap-4 justify-end">
               <Button
                 variant="outline"
                 className="px-8 border-gray-300 text-gray-700 hover:bg-gray-50 bg-transparent"
+                onClick={() =>
+                  dealer &&
+                  setFormData({
+                    company_name: dealer.company_name || "",
+                    license_number: dealer.license_number || "",
+                    tax_id: dealer.tax_id || "",
+                    telebirr_account: dealer.telebirr_account || "",
+                  })
+                }
+                disabled={isLoading}
               >
                 Cancel
               </Button>
-              <Button className="bg-black hover:bg-gray-800 text-white px-8">
-                Save
+              <Button
+                className="bg-black hover:bg-gray-800 text-white px-8"
+                onClick={handleSave}
+                disabled={isSaveDisabled || isLoading}
+              >
+                {isLoading ? "Saving..." : "Save"}
               </Button>
             </div>
           </CardContent>

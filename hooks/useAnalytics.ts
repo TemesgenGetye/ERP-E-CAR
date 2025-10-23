@@ -14,11 +14,11 @@ export const useAnalytics = () => {
 
   useEffect(() => {
     getCarViewsAnalytics();
-  }, []);
+  }, [getCarViewsAnalytics]);
 
   useEffect(() => {
     getDealerAnalytics();
-  }, []);
+  }, [getDealerAnalytics]);
 
   return {
     analytics,

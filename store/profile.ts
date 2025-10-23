@@ -31,7 +31,14 @@ interface DealerStore {
   isLoading: boolean;
   error: string | null;
   getDealer: () => Promise<void>;
-  updateDealer: (dealer: Dealer) => Promise<void>;
+  updateDealer: (
+    update: Partial<
+      Pick<
+        Dealer,
+        "company_name" | "license_number" | "tax_id" | "telebirr_account"
+      >
+    >
+  ) => Promise<void>;
 }
 
 export const useProfileStore = create<DealerStore>((set) => ({
@@ -51,12 +58,19 @@ export const useProfileStore = create<DealerStore>((set) => ({
       console.log(error);
     }
   },
-  updateDealer: async (dealer: Dealer) => {
+  updateDealer: async (
+    update: Partial<
+      Pick<
+        Dealer,
+        "company_name" | "license_number" | "tax_id" | "telebirr_account"
+      >
+    >
+  ) => {
     set({ isLoading: true, error: null });
     try {
       const res = await api<Dealer>("/dealers/me/", {
         method: "PATCH",
-        body: dealer,
+        body: update as any,
       });
       set({ dealer: res, isLoading: false });
     } catch (error) {

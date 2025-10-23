@@ -7,11 +7,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUserStore } from "@/store/user";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function Header() {
   const pathName = usePathname();
   const isAuthPage = pathName.includes("signin") || pathName.includes("signup");
   const { user } = useUserStore();
+  const { dealer } = useProfile();
+
+  console.log("dealer", dealer);
+
   if (isAuthPage) return null;
   return (
     <div
@@ -38,15 +43,12 @@ export default function Header() {
         </Link>
         <div className="flex items-center space-x-10 bg-gray-100 rounded-full p-4 py-1">
           <div className="flex gap-2 items-center ">
-            <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cmFuZG9tJTIwcGVyc29ufGVufDB8fDB8fHww"
-              alt="user-img"
-              className="size-10 rounded-full object-cover"
-            />
-            <p className="text-sm">Hello, {user.first_name}</p>
+            <p className="text-sm">
+              {dealer?.role === "dealer" ? "System Admin" : ""}
+            </p>
           </div>
           <div className="text-gray-500 bg-white rounded-full p-2 text-sm">
-            22 May
+            {dealer?.company_name}
           </div>
         </div>
       </div>

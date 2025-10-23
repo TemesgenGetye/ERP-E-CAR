@@ -49,42 +49,12 @@ import {
   YAxis,
 } from "recharts";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useCarData } from "@/hooks/useCarData";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function page() {
-  const metrics = [
-    {
-      title: "Total Cars",
-      value: "5056",
-      change: "+8.04%",
-      positive: true,
-      icon: CarFront,
-      comparison: "vs last week",
-    },
-    // {
-    //   title: "Total Users",
-    //   value: "128",
-    //   change: "-3.06%",
-    //   positive: false,
-    //   icon: Users,
-    //   comparison: "vs last week",
-    // },
-    {
-      title: "Total Sold Cars",
-      value: "84",
-      change: "+8.04%",
-      positive: true,
-      icon: Car,
-      comparison: "vs last week",
-    },
-    {
-      title: "Total Profit",
-      value: "600,543,000",
-      change: "+8.04%",
-      positive: true,
-      icon: DollarSign,
-      comparison: "vs last week",
-    },
-  ];
+  const router = useRouter();
 
   const salesData = [
     { month: "Jan", sales: 45, revenue: 1250000 },
@@ -102,6 +72,50 @@ export default function page() {
   ];
 
   const { analytics, isLoading, error } = useAnalytics();
+  const { cars, fetchCars } = useCarData();
+
+  useEffect(() => {
+    fetchCars();
+  }, [fetchCars]);
+
+  const metrics = [
+    {
+      title: "Total Cars",
+      value: analytics.dealerAnalytics?.total_cars.toString() || "0",
+      positive: true,
+      icon: CarFront,
+      comparison: "vs last week",
+    },
+    {
+      title: "Total Sold Cars",
+      value: analytics.dealerAnalytics?.sold_cars.toString() || "0",
+      positive: true,
+      icon: Car,
+      comparison: "vs last week",
+    },
+    {
+      title: "Average Price",
+      value: analytics.dealerAnalytics
+        ? `$${analytics.dealerAnalytics.average_price.toLocaleString()}`
+        : "$0",
+      positive: true,
+      icon: DollarSign,
+      comparison: "vs last week",
+    },
+    {
+      title: "Total Views",
+      value: analytics.carViews
+        .reduce((sum, car) => sum + car.total_views, 0)
+        .toString(),
+      positive: true,
+      icon: TrendingUp,
+      comparison: "vs last week",
+    },
+  ];
+
+  const latestCar = cars.length > 0 ? cars[0] : null;
+
+  const topCars = cars.slice(0, 4);
 
   return (
     <div className="min-h-screen">
@@ -222,58 +236,89 @@ export default function page() {
                   </Link>
                 </CardHeader>
                 <CardContent>
-                  <div className="relative mb-4">
-                    <img
-                      src="/id6-orange.png"
-                      alt="Volkwagen ID6 Electric"
-                      className="w-3/4 max-h-[225px] object-cover rounded-lg"
-                    />
-                    <div className="absolute bottom-2 left-2 bg-black rounded-full p-2">
-                      <CarFront className="w-4 h-4 text-white" />
+                  {latestCar ? (
+                    <>
+                      <div
+                        className="relative mb-4 cursor-pointer"
+                        onClick={() => router.push(`/listing/${latestCar.id}`)}
+                      >
+                        <img
+                          src={
+                            latestCar.images && latestCar.images.length > 0
+                              ? typeof latestCar.images[0] === "string"
+                                ? latestCar.images[0]
+                                : latestCar.images[0].image_url
+                              : "/placeholder.svg"
+                          }
+                          alt={`${latestCar.year} ${latestCar.make} ${latestCar.model}`}
+                          className="w-3/4 max-h-[225px] object-cover rounded-lg"
+                        />
+                        <div className="absolute bottom-2 left-2 bg-black rounded-full p-2">
+                          <CarFront className="w-4 h-4 text-white" />
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <p className="text-sm text-black/70">Model</p>
+                          <h3 className="font-semibold">
+                            {latestCar.year} {latestCar.make} {latestCar.model}
+                          </h3>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-black/70">Price</p>
+                          <p className="font-semibold">
+                            $
+                            {parseFloat(
+                              typeof latestCar.price === "string"
+                                ? latestCar.price
+                                : String(latestCar.price)
+                            ).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge
+                          variant="secondary"
+                          className="bg-black text-white rounded-full"
+                        >
+                          {latestCar.make}
+                        </Badge>
+                        <Badge
+                          variant="secondary"
+                          className="bg-black text-white rounded-full capitalize"
+                        >
+                          {latestCar.body_type}
+                        </Badge>
+                        <Badge
+                          variant="secondary"
+                          className="bg-black text-white rounded-full capitalize"
+                        >
+                          {latestCar.fuel_type}
+                        </Badge>
+                        <Badge
+                          variant="secondary"
+                          className="bg-black text-white rounded-full uppercase"
+                        >
+                          {latestCar.drivetrain}
+                        </Badge>
+                        <Badge
+                          variant="secondary"
+                          className="bg-black text-white rounded-full capitalize"
+                        >
+                          {latestCar.condition}
+                        </Badge>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground mb-4">
+                        No cars in inventory yet
+                      </p>
+                      <Link href="/listing/new">
+                        <Button>Add Your First Car</Button>
+                      </Link>
                     </div>
-                  </div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <p className="text-sm text-black/70">Model</p>
-                      <h3 className="font-semibold">Volkswagen ID6</h3>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-black/70">Price</p>
-                      <p className="font-semibold">5,000,000</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge
-                      variant="secondary"
-                      className="bg-black text-white rounded-full"
-                    >
-                      Vokswagen
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="bg-black text-white rounded-full"
-                    >
-                      Smart AC
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="bg-black text-white rounded-full"
-                    >
-                      Diesel
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="bg-black text-white rounded-full"
-                    >
-                      Electric
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="bg-black text-white rounded-full"
-                    >
-                      5
-                    </Badge>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -319,65 +364,49 @@ export default function page() {
                     <span className="text-sm text-gray-500">Price</span>
                   </div>
 
-                  {[
-                    {
-                      name: "Volkswagen",
-                      artist: "ID6",
-                      album: "2023",
-                      time: "5M",
-                      img: "/id6-orange.png",
-                    },
-                    {
-                      name: "BYD",
-                      artist: "Song",
-                      album: "2024",
-                      time: "3.1M",
-                      img: "/byd.png",
-                    },
-                    {
-                      name: "Suzuki",
-                      artist: "Dzire",
-                      album: "2020",
-                      time: "2.4M",
-                      img: "/dzire.webp",
-                    },
-                    // {
-                    //   name: "Toyota ",
-                    //   artist: "Land Cruiser 70",
-                    //   album: "2024",
-                    //   time: "12M",
-                    //   img: "/v8.png",
-                    // },
-                    {
-                      name: "Jetour",
-                      artist: "T1",
-                      album: "2024",
-                      time: "6M",
-                      img: "/jetour.png",
-                    },
-                  ].map((car, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center space-x-3 py-2"
-                    >
-                      <span className="text-sm w-4">{index + 1}</span>
-                      <Image
-                        src={car.img}
-                        alt={car.name + "-image"}
-                        width={100}
-                        height={100}
-                        className="w-20 h-auto"
-                      />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">{car.name}</div>
-                        <div className="text-xs text-gray-500">
-                          {car.artist}
+                  {topCars.length > 0 ? (
+                    topCars.map((car, index) => (
+                      <div
+                        key={car.id}
+                        className="flex items-center space-x-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors"
+                        onClick={() => router.push(`/listing/${car.id}`)}
+                      >
+                        <span className="text-sm w-4">{index + 1}</span>
+                        <img
+                          src={
+                            car.images && car.images.length > 0
+                              ? typeof car.images[0] === "string"
+                                ? car.images[0]
+                                : car.images[0].image_url
+                              : "/placeholder.svg"
+                          }
+                          alt={`${car.make} ${car.model}`}
+                          className="w-20 h-auto object-cover rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{car.make}</div>
+                          <div className="text-xs text-gray-500">
+                            {car.model}
+                          </div>
                         </div>
+                        <span className="text-sm text-gray-500">
+                          {car.year}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          $
+                          {parseFloat(
+                            typeof car.price === "string"
+                              ? car.price
+                              : String(car.price)
+                          ).toLocaleString()}
+                        </span>
                       </div>
-                      <span className="text-sm text-gray-500">{car.album}</span>
-                      <span className="text-sm text-gray-500">{car.time}</span>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">No cars yet</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </Card>
             </div>

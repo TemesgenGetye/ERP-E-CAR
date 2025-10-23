@@ -3,7 +3,7 @@
 import React, { ReactElement, useEffect, useState } from "react";
 import Loading from "./loading";
 import { useUserStore } from "@/store/user";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { initializeAuthState, clearAuthState } from "@/lib/api";
 
 export default function Protected({
@@ -16,8 +16,19 @@ export default function Protected({
   const [isMounted, setIsMounted] = useState(false);
   const { setUser } = useUserStore();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
+    const isAuthPath =
+      pathname?.startsWith("/signin") ||
+      pathname?.startsWith("/signup") ||
+      pathname?.startsWith("/forgot-password");
+
+    if (!isLogged && isAuthPath) {
+      setIsMounted(true);
+      return;
+    }
+
     if (!isLogged) {
       clearAuthState();
       router.push("/signin");
@@ -45,18 +56,18 @@ export default function Protected({
         }
         console.log("User data loaded successfully:", data.user);
         setUser(data.user);
-        // Initialize auth state in localStorage for token refresh tracking
+
         initializeAuthState(data.user);
-        // Set mounted to true after successful refresh
+
         console.log("Setting isMounted to true");
         setIsMounted(true);
       } catch (err: any) {
         console.error("Error in refreshUserCredentials:", err.message);
-        // Clear auth state and redirect to login on error
         clearAuthState();
         router.push("/signin");
       }
     };
+
     refreshUserCredentials();
   }, [isLogged, router, setUser]);
   if (!isMounted) return <Loading />;

@@ -52,9 +52,7 @@ export default function page() {
 
   useEffect(() => {
     fetchCars();
-  }, []);
-
-  console.log("cars", cars);
+  }, [fetchCars]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -106,12 +104,14 @@ export default function page() {
             {cars.map((car) => (
               <Card
                 key={car.id}
-                className="overflow-hidden hover:shadow-lg transition-shadow cursor-flow relative"
+                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer relative"
+                onClick={() => router.push(`/listing/${car.id}`)}
               >
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     asChild
                     className="absolute top-2 right-2 z-50 cursor-pointer "
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <Button
                       variant="ghost"
@@ -124,35 +124,43 @@ export default function page() {
                   <DropdownMenuContent align="end" className="">
                     <DropdownMenuItem
                       className=""
-                      onClick={() => router.push(`/listing/${car.id}`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/listing/${car.id}`);
+                      }}
                     >
                       View Details
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="">Edit</DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">
+                    <DropdownMenuItem
+                      className=""
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/listing/${car.id}/edit`);
+                      }}
+                    >
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (
+                          confirm(
+                            "Are you sure you want to delete this listing?"
+                          )
+                        ) {
+                          // TODO: Implement delete functionality
+                        }
+                      }}
+                    >
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
                 <div className="relative">
-                  <div className="flex justify-center bg-gray-50 py-6">
-                    <img
-                      src={
-                        car.images && car.images.length > 0
-                          ? typeof car.images[0] === "string"
-                            ? car.images[0]
-                            : car.images[0].image_url
-                          : "/placeholder.svg"
-                      }
-                      alt={`${car.year} ${car.make} ${car.model}`}
-                      className="w-full h-48 object-cover"
-                    />
-                  </div>
-                </div>
-
-                <CardContent className="p-4">
-                  <div className="absolute top-2 left-2 z-50 flex gap-2 flex-wrap">
+                  {/* Status Badges */}
+                  <div className="absolute top-2 left-2 z-10 flex gap-2 flex-wrap">
                     {/* Verification Status */}
                     {car.verification_status === "verified" && (
                       <Badge className="bg-green-500 text-white rounded-full">
@@ -190,6 +198,23 @@ export default function page() {
                       {car.condition}
                     </Badge>
                   </div>
+
+                  <div className="flex justify-center bg-gray-50 py-6">
+                    <img
+                      src={
+                        car.images && car.images.length > 0
+                          ? typeof car.images[0] === "string"
+                            ? car.images[0]
+                            : car.images[0].image_url
+                          : "/placeholder.svg"
+                      }
+                      alt={`${car.year} ${car.make} ${car.model}`}
+                      className="w-full h-48 object-cover"
+                    />
+                  </div>
+                </div>
+
+                <CardContent className="p-4">
                   <h3 className="font-semibold text-lg mb-2">
                     {car.year} {car.make} {car.model}
                   </h3>

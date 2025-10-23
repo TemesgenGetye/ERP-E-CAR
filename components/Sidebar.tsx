@@ -11,6 +11,8 @@ import {
   PackageCheck,
   Settings,
   Users,
+  Calculator,
+  TrendingUp,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,6 +25,8 @@ export default function Sidebar() {
   const links = [
     { label: "Dashboard", href: "/", icon: LayoutDashboard },
     { label: "Cars", href: "/listing", icon: CarFront },
+    { label: "Sales", href: "/sales", icon: TrendingUp },
+    { label: "Accounting", href: "/accounting", icon: Calculator },
     // { label: "Users", href: "/users", icon: Users },
   ];
   const pathName = usePathname();
