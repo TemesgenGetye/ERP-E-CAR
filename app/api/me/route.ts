@@ -1,11 +1,24 @@
 import { cookies, headers } from "next/headers";
 
-const api = process.env.BASE_API_URL;
+const api =
+  process.env.NEXT_PUBLIC_BASE_API_URL ||
+  "https://online-car-market.onrender.com/api";
 
 export async function GET() {
   const cookieStore = await cookies();
   const refresh = cookieStore.get("refresh")?.value;
-  let outside;
+
+  // If no refresh token, return 401
+  if (!refresh) {
+    return Response.json(
+      {
+        ok: false,
+        message: "No refresh token found",
+      },
+      { status: 401 }
+    );
+  }
+
   try {
     const response = await fetch(`${api}/auth/token/refresh`, {
       method: "POST",
@@ -14,50 +27,68 @@ export async function GET() {
       },
       body: JSON.stringify({ refresh }),
     });
-    if (!response.ok) throw new Error("Error updating tokens");
+
+    if (!response.ok) {
+      throw new Error(`Token refresh failed: ${response.status}`);
+    }
+
     const data = await response.json();
-    outside = data;
-    if (!data.refresh || !data.access)
-      throw new Error("tokens are not available");
+
+    if (!data.refresh || !data.access) {
+      throw new Error("Invalid token response");
+    }
+
+    // Set cookies with proper configuration
     cookieStore.set({
       name: "access",
-      value: data?.access,
-      secure: true,
+      value: data.access,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       path: "/",
       maxAge: 60 * 15, // 15 minutes
     });
+
     cookieStore.set({
       name: "refresh",
-      value: data?.refresh,
-
-      secure: true,
+      value: data.refresh,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       path: "/",
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: 60 * 60 * 24 * 30, // 30 days
     });
-    const res = await fetch(`${api}/auth/user/`, {
-      headers: { Authorization: `Bearer ${data?.access}` },
+
+    // Fetch user data
+    const userResponse = await fetch(`${api}/auth/user/`, {
+      headers: { Authorization: `Bearer ${data.access}` },
     });
-    if (!res.ok) throw new Error("Failed to fetch user.");
-    const user = await res.json();
+
+    if (!userResponse.ok) {
+      throw new Error("Failed to fetch user data");
+    }
+
+    const user = await userResponse.json();
+
     return Response.json(
       {
         ok: true,
-        message: "succesfully refreshed tokens.",
+        message: "Successfully refreshed tokens",
         user,
       },
       { status: 200 }
     );
   } catch (err: any) {
-    console.error(err.message);
+    console.error("API /me error:", err.message);
+
+    // Clear cookies on error
+    cookieStore.delete("access");
+    cookieStore.delete("refresh");
+
     return Response.json(
       {
         ok: false,
         message: err.message,
-        outside,
       },
-      { status: 500 }
+      { status: 401 }
     );
   }
 }

@@ -22,7 +22,7 @@ export async function GET() {
       { status: 200 }
     );
   } catch (err: any) {
-    console.error(err.message);
+    console.error("API /token error:", err.message);
     return Response.json({ ok: false, message: err.message }, { status: 500 });
   }
 }

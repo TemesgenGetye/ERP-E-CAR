@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Eye, Heart, Trash2, CheckCircle2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Eye,
+  Heart,
+  Trash2,
+  CheckCircle2,
+  Phone,
+  Mail,
+  Calendar,
+  User,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,59 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCarData } from "@/hooks/useCarData";
+import { useCarLeads } from "@/hooks/useCarLeads";
 import { useParams, useRouter } from "next/navigation";
-
-// Mock user interactions data - TODO: Replace with actual API data
-const mockUserInteractions = [
-  {
-    id: 1,
-    name: "John Smith",
-    email: "john.smith@email.com",
-    phone: "+1 (555) 123-4567",
-    initials: "JS",
-    status: "contacted",
-  },
-  {
-    id: 2,
-    name: "Sarah Johnson",
-    email: "sarah.j@email.com",
-    phone: "+1 (555) 234-5678",
-    initials: "SJ",
-    status: "contacted",
-  },
-  {
-    id: 3,
-    name: "Michael Brown",
-    email: "m.brown@email.com",
-    phone: "+1 (555) 345-6789",
-    initials: "MB",
-    status: "Not contacted",
-  },
-  {
-    id: 4,
-    name: "Emily Davis",
-    email: "emily.davis@email.com",
-    phone: "+1 (555) 456-7890",
-    initials: "ED",
-    status: "Not contacted",
-  },
-  {
-    id: 5,
-    name: "David Wilson",
-    email: "d.wilson@email.com",
-    phone: "+1 (555) 567-8901",
-    initials: "DW",
-    status: "Not contacted",
-  },
-  {
-    id: 6,
-    name: "Lisa Anderson",
-    email: "lisa.a@email.com",
-    phone: "+1 (555) 678-9012",
-    initials: "LA",
-    status: "Not contacted",
-  },
-];
 
 const getAvatarColor = (initials: string) => {
   const colors = [
@@ -81,18 +40,41 @@ const getAvatarColor = (initials: string) => {
   return colors[index];
 };
 
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "inquiry":
+      return "bg-blue-100 text-blue-800";
+    case "qualified":
+      return "bg-green-100 text-green-800";
+    case "proposal":
+      return "bg-yellow-100 text-yellow-800";
+    case "negotiation":
+      return "bg-orange-100 text-orange-800";
+    case "closed_won":
+      return "bg-emerald-100 text-emerald-800";
+    case "closed_lost":
+      return "bg-red-100 text-red-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
+
+const formatStatus = (status: string) => {
+  return status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
 export default function CarDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { car, isLoading, error, fetchCarById } = useCarData();
+  const {
+    leads,
+    isLoading: leadsLoading,
+    error: leadsError,
+    updateLeadStatus,
+  } = useCarLeads(params.id as string);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showAllUsers, setShowAllUsers] = useState(false);
-  const [userStatuses, setUserStatuses] = useState(
-    mockUserInteractions.reduce((acc, user) => {
-      acc[user.id] = user.status;
-      return acc;
-    }, {} as Record<number, string>)
-  );
 
   useEffect(() => {
     if (params.id) {
@@ -106,12 +88,14 @@ export default function CarDetailPage() {
     }
   }, [car]);
 
-  const displayedUsers = showAllUsers
-    ? mockUserInteractions
-    : mockUserInteractions.slice(0, 3);
+  const displayedUsers = showAllUsers ? leads : leads.slice(0, 3);
 
-  const handleStatusChange = (userId: number, newStatus: string) => {
-    setUserStatuses((prev) => ({ ...prev, [userId]: newStatus }));
+  const handleStatusChange = async (leadId: number, newStatus: string) => {
+    try {
+      await updateLeadStatus(leadId, newStatus);
+    } catch (error) {
+      console.error("Failed to update lead status:", error);
+    }
   };
 
   if (isLoading) {
@@ -520,9 +504,14 @@ export default function CarDetailPage() {
         {/* User Interactions Section */}
         <Card className="mx-6 mb-6">
           <CardContent className="p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              User Interactions
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Lead Interactions
+              </h2>
+              <Badge variant="secondary" className="text-sm">
+                {leads.length} {leads.length === 1 ? "lead" : "leads"}
+              </Badge>
+            </div>
 
             <div className="overflow-hidden">
               {/* Table Header */}
@@ -530,11 +519,11 @@ export default function CarDetailPage() {
                 <div className="col-span-1">
                   <Checkbox />
                 </div>
-                <div className="col-span-3">Name</div>
-                <div className="col-span-3">Email address</div>
-                <div className="col-span-2">Phone</div>
+                <div className="col-span-3">Contact</div>
+                <div className="col-span-2">Phone/Email</div>
                 <div className="col-span-2">Status</div>
-                <div className="col-span-1"></div>
+                <div className="col-span-2">Created</div>
+                <div className="col-span-2">Actions</div>
               </div>
 
               {/* Table Rows */}
@@ -542,7 +531,7 @@ export default function CarDetailPage() {
                 {displayedUsers.map((user) => (
                   <div
                     key={user.id}
-                    className="grid grid-cols-12 gap-4 py-4 items-center hover:bg-gray-50"
+                    className="grid grid-cols-12 gap-4 py-4 items-center hover:bg-gray-50 transition-colors"
                   >
                     <div className="col-span-1">
                       <Checkbox />
@@ -550,48 +539,91 @@ export default function CarDetailPage() {
                     <div className="col-span-3 flex items-center gap-3">
                       <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${getAvatarColor(
-                          user.initials
+                          user.initials || "XX"
                         )}`}
                       >
-                        {user.initials}
+                        {user.initials || "XX"}
                       </div>
-                      <span className="font-medium text-gray-900">
-                        {user.name}
-                      </span>
+                      <div>
+                        <span className="font-medium text-gray-900 block">
+                          {user.name}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Lead #{user.id}
+                        </span>
+                      </div>
                     </div>
-                    <div className="col-span-3 text-gray-600">{user.email}</div>
-                    <div className="col-span-2 text-gray-600">{user.phone}</div>
+                    <div className="col-span-2 text-gray-600">
+                      <div className="flex items-center gap-2">
+                        {user.email ? (
+                          <>
+                            <Mail className="h-4 w-4" />
+                            <span className="text-sm">{user.email}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Phone className="h-4 w-4" />
+                            <span className="text-sm">{user.contact}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                     <div className="col-span-2">
-                      <Select
-                        value={userStatuses[user.id]}
-                        onValueChange={(value) =>
-                          handleStatusChange(user.id, value)
-                        }
+                      <Badge
+                        className={`${getStatusColor(user.status)} text-xs`}
                       >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="contacted">Contacted</SelectItem>
-                          <SelectItem value="Not contacted">
-                            Not Contacted
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                        {formatStatus(user.status)}
+                      </Badge>
+                    </div>
+                    <div className="col-span-2 text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        <span className="text-sm">
+                          {new Date(user.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={user.status}
+                          onValueChange={(value) =>
+                            handleStatusChange(user.id, value)
+                          }
+                        >
+                          <SelectTrigger className="w-full h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="inquiry">Inquiry</SelectItem>
+                            <SelectItem value="qualified">Qualified</SelectItem>
+                            <SelectItem value="proposal">Proposal</SelectItem>
+                            <SelectItem value="negotiation">
+                              Negotiation
+                            </SelectItem>
+                            <SelectItem value="closed_won">
+                              Closed Won
+                            </SelectItem>
+                            <SelectItem value="closed_lost">
+                              Closed Lost
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {!showAllUsers && mockUserInteractions.length > 3 && (
+            {!showAllUsers && leads.length > 3 && (
               <div className="mt-4">
                 <Button
                   variant="outline"
                   onClick={() => setShowAllUsers(true)}
                   className="w-fit shadow-none border-none bg-gray-100 cursor-pointer"
                 >
-                  Show More ({mockUserInteractions.length - 3} more users)
+                  Show More ({leads.length - 3} more leads)
                 </Button>
               </div>
             )}
@@ -608,10 +640,23 @@ export default function CarDetailPage() {
               </div>
             )}
 
-            {mockUserInteractions.length === 0 && (
+            {leadsLoading && (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading leads...</p>
+              </div>
+            )}
+
+            {leadsError && (
+              <div className="text-center py-8">
+                <p className="text-red-500 mb-2">Error loading leads</p>
+                <p className="text-sm text-muted-foreground">{leadsError}</p>
+              </div>
+            )}
+
+            {!leadsLoading && !leadsError && leads.length === 0 && (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
-                  No user interactions yet
+                  No leads for this car yet
                 </p>
               </div>
             )}

@@ -15,7 +15,7 @@ export default function Header() {
   const { user } = useUserStore();
   const { dealer } = useProfile();
 
-  console.log("dealer", dealer);
+  console.log("seller", dealer);
 
   if (isAuthPage) return null;
   return (

@@ -138,7 +138,7 @@ export default function AccountingPage() {
       }
       setShowReportDialog(false);
       setEditingReport(null);
-      setReportForm({ type: "profit_loss", dealer: dealer?.id, data: "" });
+      setReportForm({ type: "profit_loss", dealer: dealer?.id });
     } catch (error) {
       console.error("Error saving report:", error);
     }

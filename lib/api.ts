@@ -114,7 +114,7 @@ async function refreshTokens(): Promise<{
 // Check if we need to refresh tokens based on last refresh time
 function shouldRefreshTokens(): boolean {
   const authState = getAuthState();
-  if (!authState || !authState.lastRefreshed) return true;
+  if (!authState || !authState.lastRefreshed) return false; // Don't refresh if no auth state
 
   const lastRefreshed = authState.lastRefreshed;
   const now = Date.now();
@@ -150,6 +150,7 @@ async function getAccessToken(): Promise<string | null> {
 export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   const { headers, body, skipAuth, ...rest } = opts;
 
+  // Only attempt token refresh if we have auth state and it's not already refreshing
   if (!skipAuth && shouldRefreshTokens() && !isRefreshing) {
     console.log("Token refresh needed, refreshing proactively...");
     isRefreshing = true;
@@ -159,6 +160,8 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
       await refreshPromise;
     } catch (error) {
       console.error("Proactive token refresh failed:", error);
+      // Clear auth state if refresh fails
+      clearAuthState();
     } finally {
       isRefreshing = false;
       refreshPromise = null;
@@ -186,35 +189,49 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   if (res.status === 401 && !skipAuth) {
     console.log("Got 401, attempting token refresh...");
 
-    if (!isRefreshing) {
-      isRefreshing = true;
-      refreshPromise = refreshTokens();
-    }
-
-    const refreshResult = await refreshPromise;
-    isRefreshing = false;
-    refreshPromise = null;
-
-    if (refreshResult) {
-      const newAccessToken = await getAccessToken();
-      res = await fetch(`${API_URL}${path}`, {
-        headers: {
-          ...(isFormData ? {} : { "Content-Type": "application/json" }),
-          ...(newAccessToken
-            ? { Authorization: `Bearer ${newAccessToken}` }
-            : {}),
-          ...(headers || {}),
-        },
-        body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
-        credentials: "include",
-        ...rest,
-      });
-    } else {
+    // Prevent infinite refresh loops
+    if (isRefreshing) {
+      console.log("Already refreshing, redirecting to login...");
       if (typeof window !== "undefined") {
-        localStorage.removeItem("auth-tokens");
+        clearAuthState();
         window.location.href = "/signin";
       }
       throw new Error("Authentication failed. Please login again.");
+    }
+
+    isRefreshing = true;
+    refreshPromise = refreshTokens();
+
+    try {
+      const refreshResult = await refreshPromise;
+
+      if (refreshResult) {
+        const newAccessToken = await getAccessToken();
+        res = await fetch(`${API_URL}${path}`, {
+          headers: {
+            ...(isFormData ? {} : { "Content-Type": "application/json" }),
+            ...(newAccessToken
+              ? { Authorization: `Bearer ${newAccessToken}` }
+              : {}),
+            ...(headers || {}),
+          },
+          body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
+          credentials: "include",
+          ...rest,
+        });
+      } else {
+        throw new Error("Token refresh failed");
+      }
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      if (typeof window !== "undefined") {
+        clearAuthState();
+        window.location.href = "/signin";
+      }
+      throw new Error("Authentication failed. Please login again.");
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
     }
   }
 

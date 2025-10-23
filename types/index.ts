@@ -116,7 +116,6 @@ export interface Expense {
   id: number;
   type: "maintenance" | "marketing" | "oprational" | "other";
   amount: string;
-  date: string;
   dealer: number;
   description: string;
 }
@@ -152,4 +151,24 @@ export interface Lead {
   assigned_sales: number | null;
   car: number;
   created_at: string;
+}
+
+export interface User {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
+export interface DealerStaff {
+  id: number;
+  user: User;
+  role: "seller" | "accountant";
+  assigned_at: string;
+  updated_at: string;
+}
+
+export interface CreateDealerStaffRequest {
+  user_email: string;
+  role: "seller" | "accountant";
 }
