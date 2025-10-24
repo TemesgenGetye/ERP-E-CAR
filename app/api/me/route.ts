@@ -1,65 +1,28 @@
-import { cookies, headers } from "next/headers";
-
 const api =
   process.env.NEXT_PUBLIC_BASE_API_URL ||
   "https://online-car-market.onrender.com/api";
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const refresh = cookieStore.get("refresh")?.value;
-
-  // If no refresh token, return 401
-  if (!refresh) {
-    return Response.json(
-      {
-        ok: false,
-        message: "No refresh token found",
-      },
-      { status: 401 }
-    );
-  }
-
   try {
-    const response = await fetch(`${api}/auth/token/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ refresh }),
-    });
+    // Get tokens from request headers instead of cookies
+    const headers = await import("next/headers").then((m) => m.headers());
+    const authHeader = headers.get("authorization");
 
-    if (!response.ok) {
-      throw new Error(`Token refresh failed: ${response.status}`);
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return Response.json(
+        {
+          ok: false,
+          message: "No authorization header found",
+        },
+        { status: 401 }
+      );
     }
 
-    const data = await response.json();
+    const accessToken = authHeader.replace("Bearer ", "");
 
-    if (!data.refresh || !data.access) {
-      throw new Error("Invalid token response");
-    }
-
-    // Set cookies with proper configuration
-    cookieStore.set({
-      name: "access",
-      value: data.access,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: 60 * 15, // 15 minutes
-    });
-
-    cookieStore.set({
-      name: "refresh",
-      value: data.refresh,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    });
-
-    // Fetch user data
+    // Fetch user data with the provided token
     const userResponse = await fetch(`${api}/auth/user/`, {
-      headers: { Authorization: `Bearer ${data.access}` },
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     if (!userResponse.ok) {
@@ -71,17 +34,13 @@ export async function GET() {
     return Response.json(
       {
         ok: true,
-        message: "Successfully refreshed tokens",
+        message: "User data retrieved successfully",
         user,
       },
       { status: 200 }
     );
   } catch (err: any) {
     console.error("API /me error:", err.message);
-
-    // Clear cookies on error
-    cookieStore.delete("access");
-    cookieStore.delete("refresh");
 
     return Response.json(
       {

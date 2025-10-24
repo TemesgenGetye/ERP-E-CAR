@@ -1,23 +1,23 @@
-import { cookies } from "next/headers";
-
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const access = cookieStore.get("access")?.value;
-    const refresh = cookieStore.get("refresh")?.value;
+    // Get tokens from request headers instead of cookies
+    const headers = await import("next/headers").then((m) => m.headers());
+    const authHeader = headers.get("authorization");
 
-    if (!access) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return Response.json(
-        { ok: false, message: "No access token found" },
+        { ok: false, message: "No authorization header found" },
         { status: 401 }
       );
     }
 
+    const accessToken = authHeader.replace("Bearer ", "");
+
     return Response.json(
       {
         ok: true,
-        access,
-        refresh,
+        access: accessToken,
+        refresh: null, // We'll handle refresh differently
       },
       { status: 200 }
     );

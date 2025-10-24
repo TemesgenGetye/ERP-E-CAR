@@ -14,6 +14,7 @@ export default function Protected({
   isLogged: boolean;
 }) {
   const [isMounted, setIsMounted] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { setUser } = useUserStore();
   const router = useRouter();
   const pathname = usePathname();
@@ -31,47 +32,30 @@ export default function Protected({
       return;
     }
 
-    // For non-auth pages, check if user is logged in
-    if (!isLogged) {
+    // Check if user has tokens in localStorage
+    const checkAuthStatus = () => {
+      try {
+        const authData = localStorage.getItem("auth-tokens");
+        if (authData) {
+          const parsed = JSON.parse(authData);
+          if (parsed.access && parsed.user) {
+            setIsAuthenticated(true);
+            setUser(parsed.user);
+            setIsMounted(true);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+      }
+
+      // No valid auth data, redirect to signin
       clearAuthState();
       router.push("/signin");
-      return;
-    }
-
-    // Only run auth refresh for logged-in users on non-auth pages
-    const refreshUserCredentials = async () => {
-      try {
-        console.log("Fetching user credentials from /api/me...");
-        const res = await fetch("/api/me");
-        console.log("Response status:", res.status);
-        const data = await res.json();
-        console.log("Response data:", data);
-
-        if (!data.ok) {
-          console.error("Token refresh failed:", data.message);
-          clearAuthState();
-          router.push("/signin");
-          return;
-        }
-        if (!data.user) {
-          console.error("No user data in response");
-          clearAuthState();
-          router.push("/signin");
-          return;
-        }
-        console.log("User data loaded successfully:", data.user);
-        setUser(data.user);
-        initializeAuthState(data.user);
-        setIsMounted(true);
-      } catch (err: any) {
-        console.error("Error in refreshUserCredentials:", err.message);
-        clearAuthState();
-        router.push("/signin");
-      }
     };
 
-    refreshUserCredentials();
-  }, [isLogged, router, setUser, pathname]);
+    checkAuthStatus();
+  }, [router, setUser, pathname]);
   if (!isMounted) return <Loading />;
   return <div>{children}</div>;
 }

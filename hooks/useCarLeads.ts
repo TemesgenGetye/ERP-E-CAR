@@ -4,9 +4,8 @@ import { Lead } from "@/types";
 import { useAuthGuard } from "./useAuthGuard";
 
 interface CarLead extends Lead {
-  // Additional fields that might be useful for display
   initials?: string;
-  email?: string; // We'll derive this from contact if it's an email
+  email?: string;
 }
 
 export const useCarLeads = (carId: string | number | undefined) => {

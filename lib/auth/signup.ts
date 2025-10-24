@@ -1,4 +1,3 @@
-"use server";
 interface SignUpParams {
   first_name: string;
   last_name: string;
@@ -9,16 +8,21 @@ interface SignUpParams {
 
 export const signup = async (data: SignUpParams) => {
   try {
-    const res = await fetch(`${process.env.BASE_API_URL}/auth/registration/`, {
+    const API_URL =
+      process.env.NEXT_PUBLIC_BASE_API_URL ||
+      "https://online-car-market.onrender.com/api";
+
+    const res = await fetch(`${API_URL}/auth/registration/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Something went wrong");
-    const user = await res.json();
 
+    if (!res.ok) throw new Error("Something went wrong");
+
+    const user = await res.json();
     return user;
   } catch (err: any) {
     console.error(err.message);
