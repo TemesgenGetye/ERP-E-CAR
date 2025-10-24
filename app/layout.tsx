@@ -5,6 +5,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import { cookies } from "next/headers";
 import Protected from "./Protected";
 
 export const metadata: Metadata = {
@@ -16,7 +17,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const isLogged = false;
+  const cookieStore = await cookies();
+  const hasAccessToken = !!cookieStore.get("access")?.value;
+  const hasRefreshToken = !!cookieStore.get("refresh")?.value;
+  const isLogged = hasAccessToken || hasRefreshToken;
 
   return (
     <html lang="en">
