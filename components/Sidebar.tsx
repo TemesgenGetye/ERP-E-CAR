@@ -14,6 +14,7 @@ import {
   Calculator,
   TrendingUp,
   UserCheck,
+  Briefcase,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -28,6 +29,7 @@ export default function Sidebar() {
     { label: "Cars", href: "/listing", icon: CarFront },
     { label: "Sales", href: "/sales", icon: TrendingUp },
     { label: "Accounting", href: "/accounting", icon: Calculator },
+    { label: "HR", href: "/hr", icon: Briefcase },
     { label: "Staff", href: "/staff", icon: UserCheck },
     // { label: "Users", href: "/users", icon: Users },
   ];

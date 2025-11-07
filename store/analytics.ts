@@ -28,12 +28,30 @@ interface Analytics {
   dealerAnalytics: DealerAnalytics | null;
 }
 
+interface HighSaleCar {
+  car_details: string;
+  sale_count: number;
+  month: number;
+  year: number;
+}
+
+interface TopSeller {
+  user_email: string;
+  total_sales: number;
+  month: number;
+  year: number;
+}
+
 interface AnalyticsState {
   analytics: Analytics;
   isLoading: boolean;
   error: string | null;
+  topSellers: TopSeller[];
+  highSaleCars: HighSaleCar[];
   getCarViewsAnalytics: () => Promise<void>;
   getDealerAnalytics: () => Promise<void>;
+  getHighSaleCars: () => Promise<void>;
+  getTopSellers: () => Promise<void>;
 }
 
 export const useAnalyticsStore = create<AnalyticsState>((set) => ({
@@ -41,6 +59,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set) => ({
     carViews: [],
     dealerAnalytics: null,
   },
+  topSellers: [],
+  highSaleCars: [],
   isLoading: false,
   error: null,
   getCarViewsAnalytics: async () => {
@@ -74,6 +94,42 @@ export const useAnalyticsStore = create<AnalyticsState>((set) => ({
         isLoading: false,
       }));
     } catch (error) {
+      set({ error: (error as Error).message, isLoading: false });
+    }
+  },
+  getHighSaleCars: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api<HighSaleCar[]>("/dealers/high-sale-cars/", {
+        method: "GET",
+      });
+      
+      set((state) => ({
+        highSaleCars: res,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error("Error fetching high sale cars:", error);
+      set({ error: (error as Error).message, isLoading: false });
+    }
+  },
+  getTopSellers: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api<TopSeller[]>(
+        "/dealers/top-sellers/",
+
+        {
+          method: "GET",
+        }
+      );
+      console.log("Top sellers response:", res);
+      set((state) => ({
+        topSellers: res,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error("Error fetching top sellers:", error);
       set({ error: (error as Error).message, isLoading: false });
     }
   },

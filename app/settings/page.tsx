@@ -155,18 +155,6 @@ export default function AccountSettingsPage() {
                   />
                 </div>
               </div>
-
-              {/* Avatar Section */}
-              <div className="flex flex-col items-center space-y-4 relative h-fit">
-                <Avatar className="w-24 h-24 bg-gray-200">
-                  <AvatarFallback className="bg-gray-200">
-                    <User className="w-12 h-12 text-gray-400" />
-                  </AvatarFallback>
-                </Avatar>
-                <Button className="bg-black hover:bg-gray-800 text-white absolute bottom-0 left-[calc(50%-15px)] rounded-full">
-                  <Camera />
-                </Button>
-              </div>
             </div>
 
             {/* Save helper text */}

@@ -172,3 +172,117 @@ export interface CreateDealerStaffRequest {
   user_email: string;
   role: "seller" | "accountant";
 }
+
+export interface CarExpense {
+  id: number;
+  description: string;
+  amount: string;
+  currency: "USD" | "ETB";
+  converted_amount: string;
+  date: string;
+  dealer: number;
+  car: number;
+}
+
+export interface ExchangeRate {
+  id: number;
+  rate: string;
+  date: string;
+}
+
+export interface Revenue {
+  id: number;
+  source: "car_sale" | "broker_payment" | string;
+  amount: string;
+  currency: "USD" | "ETB";
+  converted_amount: string;
+  created_at: string;
+  description: string;
+  dealer: number;
+}
+
+// HR Types
+export interface Employee {
+  id: number;
+  user_email_display: string;
+  full_name: string;
+  hire_date: string;
+  position: string;
+  salary: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateEmployeeRequest {
+  user_email: string;
+  hire_date: string;
+  position: string;
+  salary: string;
+  is_active: boolean;
+}
+
+export interface Attendance {
+  id: number;
+  employee_email_display: string;
+  employee_full_name: string;
+  entry_time: string;
+  exit_time: string;
+  date: string;
+  status: "present" | "absent" | "late" | "on_leave";
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAttendanceRequest {
+  employee_email: string;
+  entry_time: string;
+  exit_time: string;
+  date: string;
+  status: "present" | "absent" | "late" | "on_leave";
+  notes: string;
+}
+
+export interface Contract {
+  id: number;
+  employee_email_display: string;
+  employee_full_name: string;
+  start_date: string;
+  end_date: string;
+  terms: string;
+  salary: string;
+  status: "active" | "inactive" | "terminated";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateContractRequest {
+  employee_email: string;
+  start_date: string;
+  end_date: string;
+  terms: string;
+  salary: string;
+  status: "active" | "inactive" | "terminated";
+}
+
+export interface Leave {
+  id: number;
+  employee_email_display: string;
+  employee_full_name: string;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status: "pending" | "approved" | "denied";
+  approved_by_email: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateLeaveRequest {
+  employee_email: string;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status: "pending" | "approved" | "denied";
+}

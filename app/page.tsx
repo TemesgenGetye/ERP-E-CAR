@@ -65,18 +65,25 @@ export default function page() {
     { month: "Jun", sales: 67, revenue: 1850000 },
   ];
 
-  const customerData = [
-    { segment: "Volkswagen", value: 35, color: "silver" },
-    { segment: "BYD", value: 45, color: "black" },
-    { segment: "Hyundai", value: 20, color: "#222" },
-  ];
-
-  const { analytics, isLoading, error } = useAnalytics();
+  const {
+    analytics,
+    topSellers,
+    highSaleCars,
+    isLoading,
+    error,
+    getTopSellers,
+    getHighSaleCars,
+  } = useAnalytics();
   const { cars, fetchCars } = useCarData();
 
   useEffect(() => {
     fetchCars();
   }, [fetchCars]);
+
+  useEffect(() => {
+    getTopSellers();
+    getHighSaleCars();
+  }, [getTopSellers, getHighSaleCars]);
 
   const metrics = [
     {
@@ -137,16 +144,6 @@ export default function page() {
                   <CardContent>
                     <div className="flex items-center gap-2 mb-2">
                       <div className="text-2xl font-bold">{metric.value}</div>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span
-                        className={`font-medium ${
-                          metric.positive ? "text-green-400" : "text-red-400"
-                        }`}
-                      >
-                        {metric.change}
-                      </span>
-                      <span className="">{metric.comparison}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -411,7 +408,99 @@ export default function page() {
               </Card>
             </div>
 
-            {/* New Inventory */}
+            {/* Top Sellers Section */}
+            <div className="h-full">
+              <Card className="p-6 shadow-none h-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Top Sellers</h3>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm text-gray-500 w-4">#</span>
+                    <span className="text-sm text-gray-500 flex-1">Email</span>
+                    <span className="text-sm text-gray-500">Sales</span>
+                    <span className="text-sm text-gray-500">Month/Year</span>
+                  </div>
+
+                  {topSellers.length > 0 ? (
+                    topSellers.map((seller, index) => (
+                      <div
+                        key={`${seller.user_email}-${index}`}
+                        className="flex items-center space-x-3 py-2 hover:bg-gray-50 rounded-lg transition-colors"
+                      >
+                        <span className="text-sm w-4">{index + 1}</span>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">
+                            {seller.user_email}
+                          </div>
+                        </div>
+                        <span className="text-sm text-gray-500">
+                          {seller.total_sales}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {seller.month}/{seller.year}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        No top sellers data yet
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          </div>
+
+          {/* High Sale Cars Section */}
+          <div className="mt-6">
+            <Card className="p-6 shadow-none">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">High Sale Cars</h3>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-500 w-4">#</span>
+                  <span className="text-sm text-gray-500 flex-1">
+                    Car Details
+                  </span>
+                  <span className="text-sm text-gray-500">Sale Count</span>
+                  <span className="text-sm text-gray-500">Month/Year</span>
+                </div>
+
+                {highSaleCars.length > 0 ? (
+                  highSaleCars.map((car, index) => (
+                    <div
+                      key={`${car.car_details}-${index}`}
+                      className="flex items-center space-x-3 py-2 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      <span className="text-sm w-4">{index + 1}</span>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">
+                          {car.car_details}
+                        </div>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {car.sale_count}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {car.month}/{car.year}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      No high sale cars data yet
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Card>
           </div>
         </div>
       </div>
