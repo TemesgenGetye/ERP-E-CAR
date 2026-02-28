@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 import { create } from "zustand";
-import { Car } from "@/types";
+import { Car, CarDetail } from "@/types";
 import { UserRole } from "@/hooks/useUserRole";
 
 export interface Make {
@@ -18,7 +18,7 @@ export interface Model {
 
 interface CarState {
   cars: Car[];
-  car: Car | null;
+  car: CarDetail | null;
   makes: Make[];
   models: Model[];
   isLoading: boolean;
@@ -84,20 +84,20 @@ export const useCarStore = create<CarState>((set) => ({
   fetchCarById: async (id: string, role?: UserRole) => {
     set({ car: null, isLoading: true, error: null });
     try {
-      let res: Car;
+      let res: CarDetail;
 
       if (role === "seller") {
         try {
-          res = await api<Car>(`/inventory/cars/${id}/`, {
+          res = await api<CarDetail>(`/inventory/cars/${id}/`, {
             method: "GET",
           });
         } catch (error) {
-          res = await api<Car>(`/inventory/user-cars/${id}`, {
+          res = await api<CarDetail>(`/inventory/user-cars/${id}`, {
             method: "GET",
           });
         }
       } else {
-        res = await api<Car>(`/inventory/user-cars/${id}`, {
+        res = await api<CarDetail>(`/inventory/user-cars/${id}`, {
           method: "GET",
         });
       }

@@ -153,33 +153,11 @@ export default function CarDetailPage() {
     return typeof image === "string" ? image : image.image_url;
   };
 
-  // Get features that are enabled
-  const getEnabledFeatures = () => {
-    const features: { name: string; value: boolean }[] = [
-      { name: "Air Conditioning", value: car.air_conditioning },
-      { name: "Bluetooth", value: car.bluetooth },
-      { name: "Leather Seats", value: car.leather_seats },
-      { name: "Heated Seats", value: car.heated_seats },
-      { name: "Navigation System", value: car.navigation_system },
-      { name: "Rear View Camera", value: car.rear_view_camera },
-      { name: "Sunroof", value: car.sunroof },
-      { name: "Moonroof", value: car.moonroof },
-      { name: "Cruise Control", value: car.cruise_control },
-      { name: "Keyless Entry", value: car.keyless_entry },
-      { name: "Keyless Start", value: car.keyless_start },
-      { name: "Power Windows", value: car.power_windows },
-      { name: "Power Locks", value: car.power_locks },
-      { name: "Power Seats", value: car.power_seats },
-      { name: "Power Steering", value: car.power_steering },
-      { name: "Premium Sound System", value: car.premium_sound_system },
-      { name: "Premium Wheels/Rims", value: car.premium_wheels_rims },
-      { name: "Anti-lock Brakes", value: car.anti_lock_brakes },
-      { name: "Front Airbags", value: car.front_airbags },
-      { name: "Side Airbags", value: car.side_airbags },
-      { name: "Parking Sensors", value: car.parking_sensors },
-      { name: "All Wheel Steering", value: car.all_wheel_steering },
-    ];
-    return features.filter((f) => f.value);
+  // Format feature name for display (convert snake_case to Title Case)
+  const formatFeatureName = (feature: string) => {
+    return feature
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   return (
@@ -419,18 +397,19 @@ export default function CarDetailPage() {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
                   Features & Options
                 </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {getEnabledFeatures().map((feature, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span>{feature.name}</span>
-                    </div>
-                  ))}
-                </div>
-                {getEnabledFeatures().length === 0 && (
+                {car.features && car.features.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {car.features.map((feature, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <span>{formatFeatureName(feature)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
                   <p className="text-muted-foreground text-sm">
                     No additional features listed
                   </p>
