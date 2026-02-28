@@ -470,9 +470,9 @@ export function EmployeesComponent({
                   <SelectTrigger>
                     <SelectValue placeholder="Select a salary component" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[50001]">
                     {safeSalaryCpts?.map((component: any) => (
-                      <SelectItem key={component.id} value={component.id}>
+                      <SelectItem key={component.id} value={String(component.id)}>
                         {component.name} ({component.component_type})
                       </SelectItem>
                     ))}
@@ -491,6 +491,7 @@ export function EmployeesComponent({
                     setSalaryForm({ ...salaryForm, amount: e.target.value })
                   }
                   required
+                  className="w-fit"
                 />
               </div>
             </div>

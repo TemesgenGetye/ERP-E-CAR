@@ -34,6 +34,7 @@ import {
 import { useSalaryCpts } from "@/hooks/payroll";
 import { createSalaryComponent } from "@/lib/payroll";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface SalaryComponent {
   id: number;
@@ -49,11 +50,11 @@ export function SalaryComponent() {
   });
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const {
     salaryCpts,
     isLoadingSalaryComponents,
-    refetchSalaryCpts,
     salaryCptErr,
   } = useSalaryCpts();
 
@@ -71,7 +72,8 @@ export function SalaryComponent() {
       );
       setNewComponent({ name: "", component_type: "" });
       setIsCreateModalOpen(false);
-      refetchSalaryCpts();
+      // Invalidate queries to refetch salary components
+      await queryClient.invalidateQueries({ queryKey: ["salary-components"] });
       toast({
         title: "Salary Component Created",
         variant: "success",
@@ -163,7 +165,7 @@ export function SalaryComponent() {
                       <SelectTrigger>
                         <SelectValue placeholder="Select component type" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[50001]">
                         <SelectItem value="earning">Earning</SelectItem>
                         <SelectItem value="deduction">Deduction</SelectItem>
                       </SelectContent>

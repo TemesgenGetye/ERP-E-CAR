@@ -36,12 +36,9 @@ export default function SignIn() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSubmit(onSubmit)(e);
-    }
-  };
+  // Register fields with proper handlers
+  const emailRegister = register("email", { required: "Email is required" });
+  const passwordRegister = register("password", { required: "Password is required" });
 
   const onSubmit = async (data: any) => {
     try {
@@ -132,7 +129,6 @@ export default function SignIn() {
       <CardContent>
         <form
           onSubmit={handleSubmit(onSubmit)}
-          onKeyDown={handleKeyDown}
           className="grid gap-4"
         >
           <div className="grid gap-2">
@@ -141,8 +137,11 @@ export default function SignIn() {
               id="email"
               type="email"
               placeholder="m@example.com"
-              {...register("email", { required: "Email is required" })}
-              onChange={() => setErr("")}
+              {...emailRegister}
+              onChange={(e) => {
+                emailRegister.onChange(e);
+                setErr("");
+              }}
             />
             {errors?.email && (
               <p className="text-red-400 text-sm">
@@ -160,12 +159,15 @@ export default function SignIn() {
                 id="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="password"
-                autoComplete="password"
-                {...register("password", { required: "Password is required" })}
-                onChange={() => setErr("")}
+                autoComplete="current-password"
+                {...passwordRegister}
+                onChange={(e) => {
+                  passwordRegister.onChange(e);
+                  setErr("");
+                }}
               />
               <span
-                className="absolute right-5 top-[8px]"
+                className="absolute right-5 top-[8px] cursor-pointer"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
