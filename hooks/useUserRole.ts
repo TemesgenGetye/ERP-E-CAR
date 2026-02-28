@@ -6,11 +6,11 @@ import { useStaff } from "./useStaff";
 import { API_URL } from "@/lib/config";
 import { getCredentials } from "@/lib/credential";
 
-export type UserRole = "dealer" | "accountant" | "seller" | "hr" | "finance";
+export type UserRole = "dealer" | "accountant" | "seller" | "hr" | "finance" | null;
 
 export function useUserRole() {
   const { user } = useUserStore();
-  const [role, setRole] = useState<UserRole>("dealer");
+  const [role, setRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {

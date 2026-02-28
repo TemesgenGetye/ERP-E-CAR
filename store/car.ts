@@ -27,7 +27,7 @@ interface CarState {
   fetchCarById: (id: string, role?: UserRole) => Promise<void>;
   fetchMakes: () => Promise<void>;
   fetchModels: (makeId?: number) => Promise<void>;
-  postCar: (car: FormData) => Promise<void>;
+  postCar: (car: FormData) => Promise<Car>;
   updateCar: (id: string, car: FormData) => Promise<void>;
   deleteCar: (id: string) => Promise<void>;
   fetchFilteredCars: (filters: {
@@ -138,11 +138,12 @@ export const useCarStore = create<CarState>((set) => ({
   postCar: async (car: FormData) => {
     set({ isLoading: true, error: null });
     try {
-      await api<Car>("/inventory/cars/", {
+      const response = await api<Car>("/inventory/cars/", {
         method: "POST",
         body: car,
       });
       set({ isLoading: false });
+      return response; // Return the car response with ID
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
       throw error;

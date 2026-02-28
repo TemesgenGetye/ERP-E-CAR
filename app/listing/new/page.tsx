@@ -602,7 +602,13 @@ export default function PostCarScreen() {
         title: "Success",
         description: "Your car has been posted successfully!",
       });
-      router.push("/listing");
+      
+      // Navigate to inspection detail page with the car ID
+      if (res && 'id' in res && res.id) {
+        router.push(`/listing/${res.id}/inspection`);
+      } else {
+        router.push("/listing");
+      }
     } catch (error) {
       console.error("Error posting car:", error);
       toast({
@@ -631,9 +637,9 @@ export default function PostCarScreen() {
     : [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b px-6 py-4 sticky top-0 z-10">
+      <div className="border-b px-6 py-4 z-10 sticky -top-2 bg-background">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/listing">
@@ -658,7 +664,7 @@ export default function PostCarScreen() {
         {/* Basic Information */}
         <section className="bg-white rounded-xl p-6 shadow-sm border">
           <div className="flex items-center mb-6">
-            <div className="w-6 h-6 bg-black rounded border-2 border-black mr-3 flex items-center justify-center">
+            <div className="w-6 h-6 bg-primary rounded border-2 border-primary mr-3 flex items-center justify-center">
               <Check className="h-4 w-4 text-white" />
             </div>
             <h2 className="text-xl font-bold">Basic Information</h2>
@@ -949,7 +955,7 @@ export default function PostCarScreen() {
         {/* Images */}
         <section className="bg-white rounded-xl p-6 shadow-sm border">
           <div className="flex items-center mb-6">
-            <div className="w-6 h-6 bg-black rounded border-2 border-black mr-3 flex items-center justify-center">
+            <div className="w-6 h-6 bg-primary rounded border-2 border-primary mr-3 flex items-center justify-center">
               <Check className="h-4 w-4 text-white" />
             </div>
             <h2 className="text-xl font-bold">Photos</h2>
@@ -995,7 +1001,7 @@ export default function PostCarScreen() {
         {/* Features */}
         <section className="bg-white rounded-xl p-6 shadow-sm border">
           <div className="flex items-center mb-6">
-            <div className="w-6 h-6 bg-black rounded border-2 border-black mr-3 flex items-center justify-center">
+            <div className="w-6 h-6 bg-primary rounded border-2 border-primary mr-3 flex items-center justify-center">
               <Check className="h-4 w-4 text-white" />
             </div>
             <h2 className="text-xl font-bold">Features</h2>
@@ -1031,7 +1037,7 @@ export default function PostCarScreen() {
         {/* Description */}
         <section className="bg-white rounded-xl p-6 shadow-sm border">
           <div className="flex items-center mb-6">
-            <div className="w-6 h-6 bg-black rounded border-2 border-black mr-3 flex items-center justify-center">
+            <div className="w-6 h-6 bg-primary rounded border-2 border-primary mr-3 flex items-center justify-center">
               <Check className="h-4 w-4 text-white" />
             </div>
             <h2 className="text-xl font-bold">Description</h2>

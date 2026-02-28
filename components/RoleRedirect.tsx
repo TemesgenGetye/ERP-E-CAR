@@ -35,13 +35,13 @@ export default function RoleRedirect() {
       return;
     }
 
-    const currentRole = userRole;
+    const currentRole = userRole ?? "";
     const previousRole = previousRoleRef.current;
-    const accessiblePaths = roleAccessiblePaths[currentRole] || [];
-    const defaultRoute = getDefaultRoute(currentRole);
+    const accessiblePaths = currentRole ? roleAccessiblePaths[currentRole] ?? [] : [];
+    const defaultRoute = currentRole ? getDefaultRoute(currentRole) : "/";
 
     // Check if current path is accessible for the current role
-    const isCurrentPathAccessible = accessiblePaths.some((path) => {
+    const isCurrentPathAccessible = accessiblePaths.some((path: string) => {
       if (path === "/") {
         return pathname === "/";
       }
