@@ -1,8 +1,5 @@
 import { cookies, headers } from "next/headers";
-
-const api =
-  process.env.NEXT_PUBLIC_BASE_API_URL ||
-  "https://online-car-market.onrender.com/api";
+import { API_URL } from "@/lib/config";
 
 export async function GET() {
   const cookieStore = await cookies();
@@ -20,7 +17,7 @@ export async function GET() {
   }
 
   try {
-    const response = await fetch(`${api}/auth/token/refresh`, {
+    const response = await fetch(`${API_URL}/auth/token/refresh`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -58,7 +55,7 @@ export async function GET() {
     });
 
     // Fetch user data
-    const userResponse = await fetch(`${api}/auth/user/`, {
+    const userResponse = await fetch(`${API_URL}/auth/user/`, {
       headers: { Authorization: `Bearer ${data.access}` },
     });
 

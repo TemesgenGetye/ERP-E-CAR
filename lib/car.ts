@@ -1,7 +1,5 @@
 import { getCredentials } from "./credential";
-
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_API_URL || "https://online-car-market.onrender.com/api";
+import { API_URL } from "./config";
 
 export type CarInspectionPayload = {
   car_id: number;
@@ -13,7 +11,7 @@ export type CarInspectionPayload = {
 
 export async function postCarInspection(payload: CarInspectionPayload) {
   const credential = await getCredentials();
-  const res = await fetch(`${BASE_URL}/inventory/car-inspections/`, {
+  const res = await fetch(`${API_URL}/inventory/car-inspections/`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${credential.access}`,

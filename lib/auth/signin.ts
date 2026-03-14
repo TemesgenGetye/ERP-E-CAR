@@ -1,5 +1,6 @@
 "use server";
 import { cookies } from "next/headers";
+import { API_URL } from "../config";
 
 interface SignInParams {
   email: string;
@@ -8,17 +9,37 @@ interface SignInParams {
 
 export const signin = async (data: SignInParams) => {
   try {
-    const res = await fetch(`${process.env.BASE_API_URL}/auth/login`, {
+    const res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Something went wrong");
-    const user = await res.json();
-    if (!user.access)
-      throw new Error("Error trying to log you in. Please try again.");
+    const body = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const errorMessage =
+        body?.non_field_errors?.[0] ||
+        body?.detail ||
+        body?.message ||
+        body?.error ||
+        (typeof body === "object" && body !== null
+          ? Object.values(body).flat().find((v) => typeof v === "string")
+          : null) ||
+        "Something went wrong";
+      throw new Error(errorMessage as string);
+    }
+
+    const user = body;
+    if (!user.access) {
+      const errorMessage =
+        user?.non_field_errors?.[0] ||
+        user?.detail ||
+        user?.message ||
+        "Error trying to log you in. Please try again.";
+      throw new Error(errorMessage as string);
+    }
     const cookiess = await cookies();
     cookiess.set({
       name: "access",
@@ -48,11 +69,16 @@ export const signin = async (data: SignInParams) => {
 
 export const getUser = async (id: number) => {
   try {
-    // console.log(process.env.BASE_API_URL);
-    const res = await fetch(
-      `${process.env.BASE_API_URL}/users/user-profiles/${id}`,
-    );
-    if (!res.ok) throw new Error("Something went wrong");
+    const res = await fetch(`${API_URL}/users/user-profiles/${id}`);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const errorMessage =
+        errorData?.detail ||
+        errorData?.message ||
+        errorData?.error ||
+        "Something went wrong";
+      throw new Error(errorMessage as string);
+    }
     const user = await res.json();
     // console.log(user);
     return user;

@@ -119,7 +119,7 @@ export default function Sidebar() {
           className="invert brightness-0"
         />
         <p className="text-[10px] text-primary-foreground mt-2 font-bold tracking-tighter">
-          AUTO_ERP
+          Hulucars
         </p>
       </Link>
       <div className="flex flex-col space-y-10 my-30">

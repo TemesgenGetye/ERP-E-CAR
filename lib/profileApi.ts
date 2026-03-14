@@ -12,7 +12,15 @@ export const getProfile = async () => {
         Authorization: `Bearer ${access}`,
       },
     });
-    if (!res.ok) throw new Error("Something went wrong");
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const errorMessage =
+        errorData?.detail ||
+        errorData?.message ||
+        errorData?.error ||
+        "Something went wrong";
+      throw new Error(errorMessage as string);
+    }
     const profile: UserProfile = await res.json();
     return profile;
   } catch (err: any) {
@@ -41,7 +49,18 @@ export const upgradeProfile = async (obj: any) => {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Something went wrong");
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const errorMessage =
+        errorData?.detail ||
+        errorData?.message ||
+        errorData?.non_field_errors?.[0] ||
+        (typeof errorData === "object" && errorData !== null
+          ? Object.values(errorData).flat().find((v) => typeof v === "string")
+          : null) ||
+        "Something went wrong";
+      throw new Error(errorMessage as string);
+    }
     // console.log(res);
     const upgraded = await res.json();
     // console.log("upgraded", upgraded);
@@ -95,7 +114,15 @@ export const getProfileById = async (id: number) => {
         Authorization: `Bearer ${access}`,
       },
     });
-    if (!res.ok) throw new Error("Something went wrong");
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const errorMessage =
+        errorData?.detail ||
+        errorData?.message ||
+        errorData?.error ||
+        "Something went wrong";
+      throw new Error(errorMessage as string);
+    }
     const profile: UserProfile = await res.json();
     return profile;
   } catch (err: any) {

@@ -1,6 +1,4 @@
-const API_URL =
-  process.env.NEXT_PUBLIC_BASE_API_URL ||
-  "https://online-car-market.onrender.com/api";
+import { API_URL } from "./config";
 
 type Options = RequestInit & { skipAuth?: boolean };
 

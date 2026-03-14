@@ -11,7 +11,7 @@ import Protected from "./Protected";
 import Providers from "./Providers";
 
 export const metadata: Metadata = {
-  title: "E-Car-ERP",
+  title: "Hulucars",
 };
 
 export default async function RootLayout({

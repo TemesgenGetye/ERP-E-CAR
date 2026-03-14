@@ -20,7 +20,18 @@ export const createSalaryComponent = async (
       }),
     });
     if (!response.ok) {
-      throw new Error("Failed to create salary component");
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        errorData?.detail ||
+        errorData?.message ||
+        errorData?.non_field_errors?.[0] ||
+        errorData?.name?.[0] ||
+        errorData?.component_type?.[0] ||
+        (typeof errorData === "object" && errorData !== null
+          ? Object.values(errorData).flat().find((v) => typeof v === "string")
+          : null) ||
+        "Failed to create salary component";
+      throw new Error(errorMessage as string);
     }
     return response.json();
   } catch (error) {
@@ -38,7 +49,13 @@ export const getSalaryComponents = async () => {
       },
     });
     if (!response.ok) {
-      throw new Error("Failed to fetch salary components");
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        errorData?.detail ||
+        errorData?.message ||
+        errorData?.error ||
+        "Failed to fetch salary components";
+      throw new Error(errorMessage as string);
     }
     return response.json();
   } catch (error) {
@@ -65,6 +82,21 @@ export const assignSalaryComponent = async (
       amount,
     }),
   });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage =
+      errorData?.detail ||
+      errorData?.message ||
+      errorData?.non_field_errors?.[0] ||
+      errorData?.employee?.[0] ||
+      errorData?.component?.[0] ||
+      errorData?.amount?.[0] ||
+      (typeof errorData === "object" && errorData !== null
+        ? Object.values(errorData).flat().find((v) => typeof v === "string")
+        : null) ||
+      "Failed to assign salary component";
+    throw new Error(errorMessage as string);
+  }
   return response.json();
 };
 
@@ -84,12 +116,29 @@ export const createOvertime = async (
       Authorization: `Bearer ${access}`,
     },
     body: JSON.stringify({
+      employee,
       overtime_type,
       hours,
       approved,
       date,
     }),
   });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage =
+      errorData?.detail ||
+      errorData?.message ||
+      errorData?.non_field_errors?.[0] ||
+      errorData?.employee?.[0] ||
+      errorData?.overtime_type?.[0] ||
+      errorData?.hours?.[0] ||
+      errorData?.date?.[0] ||
+      (typeof errorData === "object" && errorData !== null
+        ? Object.values(errorData).flat().find((v) => typeof v === "string")
+        : null) ||
+      "Failed to create overtime";
+    throw new Error(errorMessage as string);
+  }
   return response.json();
 };
 
@@ -103,7 +152,13 @@ export const getPayrollRuns = async () => {
       },
     });
     if (!response.ok) {
-      throw new Error("Failed to fetch payroll runs");
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        errorData?.detail ||
+        errorData?.message ||
+        errorData?.error ||
+        "Failed to fetch payroll runs";
+      throw new Error(errorMessage as string);
     }
     return response.json();
   } catch (error) {
@@ -124,6 +179,19 @@ export const createPayrollRun = async (period: string) => {
       period,
     }),
   });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage =
+      errorData?.detail ||
+      errorData?.message ||
+      errorData?.non_field_errors?.[0] ||
+      errorData?.period?.[0] ||
+      (typeof errorData === "object" && errorData !== null
+        ? Object.values(errorData).flat().find((v) => typeof v === "string")
+        : null) ||
+      "Failed to create payroll run";
+    throw new Error(errorMessage as string);
+  }
   return response.json();
 };
 
@@ -136,6 +204,15 @@ export const runPayroll = async (id: number) => {
       Authorization: `Bearer ${access}`,
     },
   });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage =
+      errorData?.detail ||
+      errorData?.message ||
+      errorData?.error ||
+      "Failed to run payroll";
+    throw new Error(errorMessage as string);
+  }
   return response.json();
 };
 
@@ -149,7 +226,13 @@ export const getPayslip = async () => {
       },
     });
     if (!response.ok) {
-      throw new Error("Failed to fetch payslip");
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        errorData?.detail ||
+        errorData?.message ||
+        errorData?.error ||
+        "Failed to fetch payslip";
+      throw new Error(errorMessage as string);
     }
     return response.json();
   } catch (error) {
