@@ -106,7 +106,7 @@ export default function SignIn() {
   return (
     <Card className="w-[450px]">
       <CardHeader>
-        <Link href={"/"} className="flex items-center gap-2 cursor-pointer">
+        <Link href={"/"} className="flex items-center justify-center gap-2 cursor-pointer">
           <Image
             src="/logo.svg"
             alt="hulucars"
