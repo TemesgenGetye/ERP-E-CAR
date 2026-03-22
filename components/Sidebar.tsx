@@ -77,7 +77,8 @@ export default function Sidebar() {
   const isAuthPage = pathName.includes("signin") || pathName.includes("signup");
 
   const links = useMemo(() => {
-    return allLinks.filter((link) => link.roles.includes(userRole));
+    const role = userRole ?? "dealer";
+    return allLinks.filter((link) => link.roles.includes(role));
   }, [userRole, allLinks]);
 
   const handleLogout = async () => {
@@ -107,20 +108,19 @@ export default function Sidebar() {
         isAuthPage && "hidden"
       }`}
     >
+      {/* logo */}
       <Link
         href={"/"}
-        className="w-8 h-8 rounded-lg flex flex-col items-center justify-center"
+        className="flex items-center gap-2 cursor-pointer bg-white rounded-full size-[70px]"
       >
         <Image
-          src={"/wheel.png"}
-          alt="logo"
-          width={100}
-          height={100}
-          className="invert brightness-0"
+          src="/logo.svg"
+          alt="hulucars"
+          width={140}
+          height={40}
+          className="h-[50px] w-auto"
+          priority
         />
-        <p className="text-[10px] text-primary-foreground mt-2 font-bold tracking-tighter">
-          Hulucars
-        </p>
       </Link>
       <div className="flex flex-col space-y-10 my-30">
         {links.map((link) => {

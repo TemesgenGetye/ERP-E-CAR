@@ -106,20 +106,15 @@ export default function SignIn() {
   return (
     <Card className="w-[450px]">
       <CardHeader>
-        <Link
-          href={"/"}
-          className="flex items-center justify-center gap-2 mb-3 border-b pb-4"
-        >
-          <div className="w-8 h-8 rounded-full flex items-center justify-center">
-            <Image
-              src="/wheel.png"
-              alt="wheel"
-              width={100}
-              height={100}
-              className="w-full h-full"
-            />
-          </div>
-          <h1>Hulucars</h1>
+        <Link href={"/"} className="flex items-center gap-2 cursor-pointer">
+          <Image
+            src="/logo.svg"
+            alt="hulucars"
+            width={140}
+            height={40}
+            className="h-28 w-auto"
+            priority
+          />
         </Link>
         <CardTitle className="text-lg md:text-xl">Sign In</CardTitle>
         <CardDescription className="text-xs md:text-sm">
