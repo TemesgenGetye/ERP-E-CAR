@@ -15,12 +15,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2, TriangleAlert } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { signin } from "@/lib/auth/signin";
 import { useUserStore } from "@/store/user";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { initializeAuthState, api } from "@/lib/api";
 import { getDefaultRoute } from "@/lib/getDefaultRoute";
 import { UserRole } from "@/hooks/useUserRole";
@@ -34,7 +33,9 @@ export default function SignIn() {
   const [err, setErr] = useState("");
   const { setUser } = useUserStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const justRegistered = searchParams.get("registered") === "1";
 
   // Register fields with proper handlers
   const emailRegister = register("email", { required: "Email is required" });
@@ -120,6 +121,11 @@ export default function SignIn() {
         <CardDescription className="text-xs md:text-sm">
           Enter your email below to login to your account
         </CardDescription>
+        {justRegistered && (
+          <p className="text-sm text-green-600 bg-green-50 dark:bg-green-950/30 dark:text-green-400 rounded-md px-3 py-2">
+            Registration successful. Sign in with your new account.
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         <form
@@ -195,12 +201,15 @@ export default function SignIn() {
             )}
           </Button>
 
-          <div
-            className={cn(
-              "w-full gap-2 flex items-center",
-              "justify-between flex-col",
-            )}
-          ></div>
+          <p className="text-center text-sm text-muted-foreground">
+            New dealer?{" "}
+            <Link
+              href="/signup"
+              className="text-primary font-medium hover:underline"
+            >
+              Create an account
+            </Link>
+          </p>
         </form>
       </CardContent>
     </Card>
