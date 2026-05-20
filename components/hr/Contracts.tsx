@@ -41,13 +41,11 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import { Contract, CreateContractRequest } from "@/types";
-import { DealerStaff } from "@/types";
-import { dealerStaffEmail, dealerStaffFullName } from "@/lib/dealerStaffDisplay";
+import { Contract, CreateContractRequest, HREmployee } from "@/types";
 
 interface ContractsProps {
   contracts: Contract[];
-  employees: DealerStaff[];
+  employees: HREmployee[];
   createContract: (contract: CreateContractRequest) => Promise<void>;
   updateContract: (
     id: number,
@@ -285,9 +283,9 @@ export function ContractsComponent({
                       {employees.map((emp) => (
                         <SelectItem
                           key={emp.id}
-                          value={dealerStaffEmail(emp)}
+                          value={emp.user_email_display}
                         >
-                          {dealerStaffFullName(emp)} — {emp.role}
+                          {emp.full_name} — {emp.position}
                         </SelectItem>
                       ))}
                     </SelectContent>

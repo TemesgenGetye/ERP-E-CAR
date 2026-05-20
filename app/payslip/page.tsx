@@ -4,24 +4,120 @@ import { FileText, Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePayslip } from "@/hooks/payslip";
+import { useState } from "react";
+
+interface PayslipLineItem {
+  name: string;
+  amount: string;
+}
 
 interface PayslipItem {
   employee: number;
   gross_earnings: string;
   total_deductions: string;
   net_salary: string;
-  earnings: string;
-  deductions: string;
+  earnings: PayslipLineItem[];
+  deductions: PayslipLineItem[];
 }
 
 export default function PayslipPage() {
-  console.log("Pay slip page reached");
   const { payslipData, isLoadingPayslip, payslipError, refetchPayslip } =
     usePayslip();
+  const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
 
   const formatCurrency = (amount: string) => {
     const num = parseFloat(amount);
     return isNaN(num) ? amount : `ETB ${num.toLocaleString()}`;
+  };
+
+  const downloadPayslip = async (payslip: PayslipItem, index: number) => {
+    setDownloadingIndex(index);
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const doc = new jsPDF();
+      const pageW = doc.internal.pageSize.getWidth();
+      let y = 20;
+
+      // Header
+      doc.setFillColor(30, 64, 175);
+      doc.rect(0, 0, pageW, 40, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("PAYSLIP", pageW / 2, 18, { align: "center" });
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Employee #${payslip.employee}`, pageW / 2, 30, { align: "center" });
+      y = 55;
+
+      // Earnings section
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(13);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(22, 101, 52);
+      doc.text("Earnings", 14, y);
+      y += 6;
+      doc.setDrawColor(22, 101, 52);
+      doc.line(14, y, pageW - 14, y);
+      y += 8;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+      payslip.earnings.forEach((item) => {
+        doc.text(item.name, 18, y);
+        doc.text(formatCurrency(item.amount), pageW - 14, y, { align: "right" });
+        y += 7;
+      });
+
+      doc.setFont("helvetica", "bold");
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(14, y, pageW - 28, 10, 2, 2, "F");
+      doc.setTextColor(22, 101, 52);
+      doc.text("Gross Earnings", 18, y + 7);
+      doc.text(formatCurrency(payslip.gross_earnings), pageW - 14, y + 7, { align: "right" });
+      y += 20;
+
+      // Deductions section
+      doc.setFontSize(13);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(185, 28, 28);
+      doc.text("Deductions", 14, y);
+      y += 6;
+      doc.setDrawColor(185, 28, 28);
+      doc.line(14, y, pageW - 14, y);
+      y += 8;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+      payslip.deductions.forEach((item) => {
+        doc.text(item.name, 18, y);
+        doc.text(formatCurrency(item.amount), pageW - 14, y, { align: "right" });
+        y += 7;
+      });
+
+      doc.setFont("helvetica", "bold");
+      doc.setFillColor(255, 241, 242);
+      doc.roundedRect(14, y, pageW - 28, 10, 2, 2, "F");
+      doc.setTextColor(185, 28, 28);
+      doc.text("Total Deductions", 18, y + 7);
+      doc.text(formatCurrency(payslip.total_deductions), pageW - 14, y + 7, { align: "right" });
+      y += 20;
+
+      // Net salary
+      doc.setFillColor(30, 64, 175);
+      doc.roundedRect(14, y, pageW - 28, 16, 3, 3, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(13);
+      doc.setFont("helvetica", "bold");
+      doc.text("Net Salary", 20, y + 11);
+      doc.text(formatCurrency(payslip.net_salary), pageW - 20, y + 11, { align: "right" });
+
+      doc.save(`payslip-employee-${payslip.employee}.pdf`);
+    } finally {
+      setDownloadingIndex(null);
+    }
   };
 
   if (isLoadingPayslip) {
@@ -92,13 +188,18 @@ export default function PayslipPage() {
               <Card key={index} className="shadow-none bg-transparent">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
+                    {/* <div className="flex items-center space-x-2">
                       <FileText className="h-5 w-5" />
                       <CardTitle>Employee #{payslip.employee}</CardTitle>
-                    </div>
-                    <Button variant="outline" size="sm">
+                    </div> */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadPayslip(payslip, index)}
+                      disabled={downloadingIndex === index}
+                    >
                       <Download className="h-4 w-4 mr-2" />
-                      Download
+                      {downloadingIndex === index ? "Generating..." : "Download"}
                     </Button>
                   </div>
                 </CardHeader>
@@ -116,11 +217,16 @@ export default function PayslipPage() {
                             {formatCurrency(payslip.gross_earnings)}
                           </span>
                         </div>
-                        <div className="p-3 bg-gray-50 rounded">
+                        <div className="p-3 bg-gray-50 rounded space-y-1">
                           <p className="text-sm text-muted-foreground mb-1">
                             Earnings Details:
                           </p>
-                          <p className="text-sm">{payslip.earnings}</p>
+                          {payslip.earnings.map((item, i) => (
+                            <div key={i} className="flex justify-between text-sm">
+                              <span>{item.name}</span>
+                              <span className="font-medium">{formatCurrency(item.amount)}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -137,11 +243,16 @@ export default function PayslipPage() {
                             {formatCurrency(payslip.total_deductions)}
                           </span>
                         </div>
-                        <div className="p-3 bg-gray-50 rounded">
+                        <div className="p-3 bg-gray-50 rounded space-y-1">
                           <p className="text-sm text-muted-foreground mb-1">
                             Deductions Details:
                           </p>
-                          <p className="text-sm">{payslip.deductions}</p>
+                          {payslip.deductions.map((item, i) => (
+                            <div key={i} className="flex justify-between text-sm">
+                              <span>{item.name}</span>
+                              <span className="font-medium">{formatCurrency(item.amount)}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>

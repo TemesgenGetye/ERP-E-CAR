@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit, Trash2, Users, UserCheck, UserX } from "lucide-react";
+import { Plus, Edit, Trash2, Users, UserCheck, UserX, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,7 @@ import { Label } from "@/components/ui/label";
 import { useDealerStaff } from "@/hooks/useDealerStaff";
 import { CreateDealerStaffRequest } from "@/types";
 import { signup } from "@/lib/auth/signup";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 
 export default function StaffPage() {
@@ -35,6 +35,7 @@ export default function StaffPage() {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingStaff, setEditingStaff] = useState<number | null>(null);
+  const [deletingStaffId, setDeletingStaffId] = useState<number | null>(null);
   const [formData, setFormData] = useState<
     CreateDealerStaffRequest & {
       first_name: string;
@@ -52,7 +53,10 @@ export default function StaffPage() {
     password1: "",
     password2: "",
   });
+  const { toast } = useToast();
   const { role: userRole } = useUserRole();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,9 +86,9 @@ export default function StaffPage() {
         password2: "",
       }));
       setShowCreateDialog(false);
-      toast.success("Staff member added successfully");
+      toast({ title: "Staff member added successfully", variant: "success" });
     } catch (error) {
-      toast.error("Failed to add staff member");
+      toast({ title: "Failed to add staff member", variant: "destructive" });
       console.error("Error creating staff:", error);
     }
   };
@@ -101,23 +105,21 @@ export default function StaffPage() {
         user_email: "",
         role: "seller",
       }));
-      toast.success("Staff member updated successfully");
+      toast({ title: "Staff member updated successfully", variant: "success" });
     } catch (error) {
-      toast.error("Failed to update staff member");
+      toast({ title: "Failed to update staff member", variant: "destructive" });
       console.error("Error updating staff:", error);
     }
   };
 
-  const handleDeleteStaff = async (id: number) => {
-    if (!confirm("Are you sure you want to remove this staff member?")) {
-      return;
-    }
-
+  const handleDeleteStaff = async () => {
+    if (!deletingStaffId) return;
     try {
-      await deleteStaff(id);
-      toast.success("Staff member removed successfully");
+      await deleteStaff(deletingStaffId);
+      setDeletingStaffId(null);
+      toast({ title: "Staff member removed successfully", variant: "success" });
     } catch (error) {
-      toast.error("Failed to remove staff member");
+      toast({ title: "Failed to remove staff member", variant: "destructive" });
       console.error("Error deleting staff:", error);
     }
   };
@@ -270,27 +272,47 @@ export default function StaffPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="password1">Password</Label>
-                    <Input
-                      id="password1"
-                      type="password"
-                      value={formData.password1}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password1: e.target.value })
-                      }
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password1"
+                        type={showPassword ? "text" : "password"}
+                        value={formData.password1}
+                        onChange={(e) =>
+                          setFormData({ ...formData, password1: e.target.value })
+                        }
+                        required
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="password2">Confirm Password</Label>
-                    <Input
-                      id="password2"
-                      type="password"
-                      value={formData.password2}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password2: e.target.value })
-                      }
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password2"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={formData.password2}
+                        onChange={(e) =>
+                          setFormData({ ...formData, password2: e.target.value })
+                        }
+                        required
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -440,7 +462,7 @@ export default function StaffPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDeleteStaff(staffMember.id)}
+                        onClick={() => setDeletingStaffId(staffMember.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -509,6 +531,26 @@ export default function StaffPage() {
               <Button type="submit">Update Staff Member</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deletingStaffId !== null} onOpenChange={() => setDeletingStaffId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Remove Staff Member</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove this staff member? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeletingStaffId(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteStaff} className="text-white">
+              Remove
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

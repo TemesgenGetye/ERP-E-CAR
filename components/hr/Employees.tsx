@@ -5,23 +5,13 @@ import {
   Edit,
   Trash2,
   MoreHorizontal,
-  DollarSign,
   Clock,
   CheckCircle,
-  ChevronDown,
   Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -38,10 +28,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
-import { DealerStaff, CreateDealerStaffRequest } from "@/types";
-import { dealerStaffFullName, dealerStaffEmail } from "@/lib/dealerStaffDisplay";
+import { HREmployee, CreateHREmployeeRequest } from "@/types";
 import { useSalaryCpts } from "@/hooks/payroll";
 import { assignSalaryComponent, createOvertime } from "@/lib/payroll";
+import { useHRStore } from "@/store/hr";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import {
@@ -51,17 +41,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { useToast } from "../ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmployeesProps {
-  employees: DealerStaff[];
-  createEmployee: (employee: CreateDealerStaffRequest) => Promise<void>;
+  employees: HREmployee[];
+  createEmployee: (employee: CreateHREmployeeRequest) => Promise<void>;
   updateEmployee: (
     id: number,
-    employee: Partial<CreateDealerStaffRequest>,
+    employee: Partial<CreateHREmployeeRequest>,
   ) => Promise<void>;
   deleteEmployee: (id: number) => Promise<void>;
 }
+
+const emptyForm = (): CreateHREmployeeRequest => ({
+  user_email: "",
+  position: "",
+  hire_date: "",
+  salary: null,
+});
 
 export function EmployeesComponent({
   employees,
@@ -70,25 +67,16 @@ export function EmployeesComponent({
   deleteEmployee,
 }: EmployeesProps) {
   const { toast } = useToast();
+  const getEmployees = useHRStore((state) => state.getEmployees);
   const [showDialog, setShowDialog] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<DealerStaff | null>(
-    null,
-  );
+  const [editingEmployee, setEditingEmployee] = useState<HREmployee | null>(null);
   const [showSalaryDialog, setShowSalaryDialog] = useState(false);
   const [showOvertimeDialog, setShowOvertimeDialog] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<DealerStaff | null>(
-    null,
-  );
+  const [selectedEmployee, setSelectedEmployee] = useState<HREmployee | null>(null);
 
-  const [form, setForm] = useState<CreateDealerStaffRequest>({
-    user_email: "",
-    role: "seller",
-  });
+  const [form, setForm] = useState<CreateHREmployeeRequest>(emptyForm());
 
-  const [salaryForm, setSalaryForm] = useState({
-    component: "",
-    amount: "",
-  });
+  const [salaryForm, setSalaryForm] = useState({ component: "", amount: "" });
 
   const [overtimeForm, setOvertimeForm] = useState({
     overtime_type: "1.5",
@@ -98,28 +86,29 @@ export function EmployeesComponent({
   });
 
   const { salaryCpts } = useSalaryCpts();
-
   const safeSalaryCpts = salaryCpts || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       if (editingEmployee) {
-        await updateEmployee(editingEmployee.id, { role: form.role });
+        await updateEmployee(editingEmployee.id, {
+          position: form.position,
+          hire_date: form.hire_date,
+          salary: form.salary,
+        });
       } else {
         await createEmployee({
           user_email: form.user_email.trim(),
-          role: form.role,
+          position: form.position,
+          hire_date: form.hire_date,
+          salary: form.salary,
         });
       }
       setShowDialog(false);
       setEditingEmployee(null);
-      setForm({
-        user_email: "",
-        role: "seller",
-      });
+      setForm(emptyForm());
     } catch (error) {
-      console.error("Error saving employee:", error);
       toast({
         title: "Error",
         description: "Failed to save employee. Please try again.",
@@ -128,11 +117,13 @@ export function EmployeesComponent({
     }
   };
 
-  const handleEdit = (employee: DealerStaff) => {
+  const handleEdit = (employee: HREmployee) => {
     setEditingEmployee(employee);
     setForm({
-      user_email: employee.user.email,
-      role: employee.role,
+      user_email: employee.user_email_display,
+      position: employee.position,
+      hire_date: employee.hire_date || "",
+      salary: employee.salary,
     });
     setShowDialog(true);
   };
@@ -142,7 +133,6 @@ export function EmployeesComponent({
       try {
         await deleteEmployee(id);
       } catch (error) {
-        console.error("Error deleting employee:", error);
         toast({
           title: "Error",
           description: "Failed to delete employee. Please try again.",
@@ -152,7 +142,7 @@ export function EmployeesComponent({
     }
   };
 
-  const handleAssignSalary = (employee: DealerStaff) => {
+  const handleAssignSalary = (employee: HREmployee) => {
     setSelectedEmployee(employee);
     setSalaryForm({ component: "", amount: "" });
     setShowSalaryDialog(true);
@@ -160,8 +150,22 @@ export function EmployeesComponent({
 
   const handleSalarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedEmployee || !salaryForm.component || !salaryForm.amount)
+    if (!selectedEmployee || !salaryForm.component || !salaryForm.amount) return;
+
+    const alreadyAssigned = selectedEmployee.components.some(
+      (c) => c.id === parseInt(salaryForm.component),
+    );
+    if (alreadyAssigned) {
+      const componentName = safeSalaryCpts.find(
+        (c: any) => String(c.id) === salaryForm.component,
+      )?.name;
+      toast({
+        title: "Already Assigned",
+        description: `${componentName ?? "This component"} is already assigned to ${selectedEmployee.full_name}.`,
+        variant: "destructive",
+      });
       return;
+    }
 
     try {
       await assignSalaryComponent(
@@ -172,28 +176,20 @@ export function EmployeesComponent({
       setShowSalaryDialog(false);
       setSelectedEmployee(null);
       setSalaryForm({ component: "", amount: "" });
-      toast({
-        title: "Success",
-        description: "Salary component assigned successfully!",
-        variant: "success",
-      });
+      await getEmployees();
+      toast({ title: "Success", description: "Salary component assigned successfully!", variant: "success" });
     } catch (error) {
-      console.error("Error assigning salary component:", error);
-      toast({
-        title: "Error",
-        description: "Failed to assign salary component. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to assign salary component.", variant: "destructive" });
     }
   };
 
-  const handleCreateOvertime = (employee: DealerStaff) => {
+  const handleCreateOvertime = (employee: HREmployee) => {
     setSelectedEmployee(employee);
     setOvertimeForm({
       overtime_type: "1.5",
       hours: "",
       approved: true,
-      date: new Date().toISOString().split("T")[0], // Today's date
+      date: new Date().toISOString().split("T")[0],
     });
     setShowOvertimeDialog(true);
   };
@@ -201,7 +197,6 @@ export function EmployeesComponent({
   const handleOvertimeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmployee || !overtimeForm.hours || !overtimeForm.date) return;
-
     try {
       await createOvertime(
         selectedEmployee.id,
@@ -212,24 +207,10 @@ export function EmployeesComponent({
       );
       setShowOvertimeDialog(false);
       setSelectedEmployee(null);
-      setOvertimeForm({
-        overtime_type: "1.5",
-        hours: "",
-        approved: true,
-        date: "",
-      });
-      toast({
-        title: "Success",
-        description: "Overtime created successfully!",
-        variant: "success",
-      });
+      setOvertimeForm({ overtime_type: "1.5", hours: "", approved: true, date: "" });
+      toast({ title: "Success", description: "Overtime created successfully!", variant: "success" });
     } catch (error) {
-      console.error("Error creating overtime:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create overtime. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to create overtime.", variant: "destructive" });
     }
   };
 
@@ -244,25 +225,18 @@ export function EmployeesComponent({
         </div>
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogTrigger asChild>
-            <Button
-              onClick={() => {
-                setEditingEmployee(null);
-                setForm({ user_email: "", role: "seller" });
-              }}
-            >
+            <Button onClick={() => { setEditingEmployee(null); setForm(emptyForm()); }}>
               <Plus className="h-4 w-4 mr-2" />
               Add Employee
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
-                {editingEmployee ? "Edit Employee" : "Add New Employee"}
-              </DialogTitle>
+              <DialogTitle>{editingEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
               <DialogDescription>
                 {editingEmployee
-                  ? "Update this staff member’s role. Email cannot be changed."
-                  : "Invite a user by email and assign a dealership role."}
+                  ? "Update this employee's details. Email cannot be changed."
+                  : "Add a new employee by email, position, and hire date."}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
@@ -273,54 +247,52 @@ export function EmployeesComponent({
                     id="user_email"
                     type="email"
                     value={form.user_email}
-                    onChange={(e) =>
-                      setForm({ ...form, user_email: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, user_email: e.target.value })}
                     required
                     disabled={!!editingEmployee}
                   />
                 </div>
-
                 <div className="grid gap-2">
-                  <Label htmlFor="role">Role</Label>
-                  <Select
-                    value={form.role}
-                    onValueChange={(value) =>
-                      setForm({
-                        ...form,
-                        role: value as CreateDealerStaffRequest["role"],
-                      })
-                    }
+                  <Label htmlFor="position">Position</Label>
+                  <Input
+                    id="position"
+                    value={form.position}
+                    onChange={(e) => setForm({ ...form, position: e.target.value })}
                     required
-                  >
-                    <SelectTrigger id="role">
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[50001]">
-                      <SelectItem value="seller">Seller</SelectItem>
-                      <SelectItem value="accountant">Accountant</SelectItem>
-                      <SelectItem value="hr">HR</SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="hire_date">Hire Date</Label>
+                  <Input
+                    id="hire_date"
+                    type="date"
+                    value={form.hire_date}
+                    onChange={(e) => setForm({ ...form, hire_date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="salary">Salary (optional)</Label>
+                  <Input
+                    id="salary"
+                    type="number"
+                    step="0.01"
+                    value={form.salary ?? ""}
+                    onChange={(e) => setForm({ ...form, salary: e.target.value || null })}
+                  />
                 </div>
               </div>
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowDialog(false)}
-                >
+                <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">
-                  {editingEmployee ? "Update" : "Create"}
-                </Button>
+                <Button type="submit">{editingEmployee ? "Update" : "Create"}</Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </CardHeader>
+
       <CardContent>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -328,9 +300,11 @@ export function EmployeesComponent({
               <tr className="border-b">
                 <th className="text-left p-2">Name</th>
                 <th className="text-left p-2">Email</th>
-                <th className="text-left p-2">Role</th>
-                <th className="text-left p-2">Assigned</th>
-                <th className="text-left p-2">Salary Components</th>
+                <th className="text-left p-2">Position</th>
+                <th className="text-left p-2">Hire Date</th>
+                <th className="text-left p-2">Status</th>
+                <th className="text-left p-2">Components</th>
+                <th className="text-left p-2">Salary Cpt</th>
                 <th className="text-left p-2">Overtime</th>
                 <th className="text-right p-2">Actions</th>
               </tr>
@@ -339,43 +313,47 @@ export function EmployeesComponent({
               {employees.length > 0 ? (
                 employees.map((employee) => (
                   <tr key={employee.id} className="border-b hover:bg-gray-50">
-                    <td className="p-2">
-                      {dealerStaffFullName(employee)}
+                    <td className="p-2 font-medium">{employee.full_name}</td>
+                    <td className="p-2 text-sm text-muted-foreground">{employee.user_email_display}</td>
+                    <td className="p-2 text-sm">{employee.position}</td>
+                    <td className="p-2 text-sm">
+                      {(employee.hire_date)
+                        ? new Date(employee.hire_date).toLocaleDateString()
+                        : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="p-2 text-sm text-muted-foreground">
-                      {dealerStaffEmail(employee)}
-                    </td>
                     <td className="p-2">
-                      <Badge variant="secondary" className="capitalize">
-                        {employee.role}
+                      <Badge variant={employee.is_active ? "default" : "secondary"}>
+                        {employee.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </td>
                     <td className="p-2 text-sm">
-                      {new Date(employee.assigned_at).toLocaleDateString()}
+                      {employee.components.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {employee.components.map((c) => (
+                            <div key={c.id} className="flex items-center gap-1">
+                              <span>{c.component_name}</span>
+                              <span className="text-muted-foreground">·</span>
+                              <span className="font-medium text-green-700">ETB {parseFloat(c.amount).toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="p-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAssignSalary(employee)}
-                        className="cursor-pointer"
-                      >
+                      <Button variant="outline" size="sm" onClick={() => handleAssignSalary(employee)}>
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Assign
                       </Button>
                     </td>
                     <td className="p-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCreateOvertime(employee)}
-                        className="cursor-pointer"
-                      >
+                      <Button variant="outline" size="sm" onClick={() => handleCreateOvertime(employee)}>
                         <Clock className="h-4 w-4 mr-1" />
-                        Add Overtime
+                        Add
                       </Button>
                     </td>
-                    <td className="p-2">
+                    <td className="p-2 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
@@ -383,9 +361,7 @@ export function EmployeesComponent({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleEdit(employee)}
-                          >
+                          <DropdownMenuItem onClick={() => handleEdit(employee)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
@@ -403,10 +379,7 @@ export function EmployeesComponent({
                 ))
               ) : (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="p-8 text-center text-muted-foreground"
-                  >
+                  <td colSpan={9} className="p-8 text-center text-muted-foreground">
                     No employees found. Add your first employee to get started.
                   </td>
                 </tr>
@@ -422,21 +395,16 @@ export function EmployeesComponent({
           <DialogHeader>
             <DialogTitle>Assign Salary Component</DialogTitle>
             <DialogDescription>
-              Assign a salary component to{" "}
-              {selectedEmployee
-                ? dealerStaffFullName(selectedEmployee)
-                : ""}
+              Assign a salary component to {selectedEmployee?.full_name ?? ""}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSalarySubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="component">Salary Component</Label>
+                <Label>Salary Component</Label>
                 <Select
                   value={salaryForm.component}
-                  onValueChange={(value) =>
-                    setSalaryForm({ ...salaryForm, component: value })
-                  }
+                  onValueChange={(value) => setSalaryForm({ ...salaryForm, component: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a salary component" />
@@ -458,20 +426,14 @@ export function EmployeesComponent({
                   step="0.01"
                   placeholder="Enter amount"
                   value={salaryForm.amount}
-                  onChange={(e) =>
-                    setSalaryForm({ ...salaryForm, amount: e.target.value })
-                  }
+                  onChange={(e) => setSalaryForm({ ...salaryForm, amount: e.target.value })}
                   required
                   className="w-fit"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowSalaryDialog(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => setShowSalaryDialog(false)}>
                 Cancel
               </Button>
               <Button type="submit">Assign Component</Button>
@@ -486,32 +448,24 @@ export function EmployeesComponent({
           <DialogHeader>
             <DialogTitle>Create Overtime</DialogTitle>
             <DialogDescription>
-              Create overtime record for{" "}
-              {selectedEmployee
-                ? dealerStaffFullName(selectedEmployee)
-                : ""}
+              Create overtime record for {selectedEmployee?.full_name ?? ""}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleOvertimeSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="overtime_type">Overtime Type</Label>
+                <Label>Overtime Type</Label>
                 <Select
                   value={overtimeForm.overtime_type}
-                  onValueChange={(value) =>
-                    setOvertimeForm({
-                      ...overtimeForm,
-                      overtime_type: value,
-                    })
-                  }
+                  onValueChange={(value) => setOvertimeForm({ ...overtimeForm, overtime_type: value })}
                 >
-                  <SelectTrigger id="overtime_type">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select overtime type" />
                   </SelectTrigger>
-                  <SelectContent className="z-50001">
+                  <SelectContent className="z-[50001]">
                     <SelectItem value="1.5">1.5x</SelectItem>
                     <SelectItem value="1.75">1.75x</SelectItem>
-                    <SelectItem value="2.0">2.0x </SelectItem>
+                    <SelectItem value="2.0">2.0x</SelectItem>
                     <SelectItem value="2.5">2.5x</SelectItem>
                   </SelectContent>
                 </Select>
@@ -524,9 +478,7 @@ export function EmployeesComponent({
                   step="0.5"
                   placeholder="Enter overtime hours"
                   value={overtimeForm.hours}
-                  onChange={(e) =>
-                    setOvertimeForm({ ...overtimeForm, hours: e.target.value })
-                  }
+                  onChange={(e) => setOvertimeForm({ ...overtimeForm, hours: e.target.value })}
                   required
                 />
               </div>
@@ -536,9 +488,7 @@ export function EmployeesComponent({
                   id="date"
                   type="date"
                   value={overtimeForm.date}
-                  onChange={(e) =>
-                    setOvertimeForm({ ...overtimeForm, date: e.target.value })
-                  }
+                  onChange={(e) => setOvertimeForm({ ...overtimeForm, date: e.target.value })}
                   required
                 />
               </div>
@@ -546,19 +496,13 @@ export function EmployeesComponent({
                 <Switch
                   id="approved"
                   checked={overtimeForm.approved}
-                  onCheckedChange={(checked) =>
-                    setOvertimeForm({ ...overtimeForm, approved: checked })
-                  }
+                  onCheckedChange={(checked) => setOvertimeForm({ ...overtimeForm, approved: checked })}
                 />
                 <Label htmlFor="approved">Approved</Label>
               </div>
             </div>
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowOvertimeDialog(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => setShowOvertimeDialog(false)}>
                 Cancel
               </Button>
               <Button type="submit">Create Overtime</Button>

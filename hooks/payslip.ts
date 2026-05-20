@@ -1,15 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { getPayslip } from "@/lib/payroll";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+
+interface PayslipLineItem {
+  name: string;
+  amount: string;
+}
 
 interface PayslipData {
   employee: number;
   gross_earnings: string;
   total_deductions: string;
   net_salary: string;
-  earnings: string;
-  deductions: string;
+  earnings: PayslipLineItem[];
+  deductions: PayslipLineItem[];
 }
 
 export const usePayslip = () => {

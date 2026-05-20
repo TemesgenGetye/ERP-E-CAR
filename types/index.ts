@@ -155,6 +155,33 @@ export interface CreateDealerStaffRequest {
   role: "seller" | "accountant" | "hr" | "finance";
 }
 
+export interface HREmployeeComponent {
+  id: number;
+  component_name: string;
+  amount: string;
+}
+
+export interface HREmployee {
+  id: number;
+  user_email_display: string;
+  full_name: string;
+  hire_date: string;
+  position: string;
+  salary: string | null;
+  components: HREmployeeComponent[];
+  is_active: boolean;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateHREmployeeRequest {
+  user_email: string;
+  position: string;
+  hire_date: string;
+  salary?: string | null;
+}
+
 export interface CarExpense {
   id: number;
   vin_code: string;
