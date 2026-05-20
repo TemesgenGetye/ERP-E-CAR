@@ -37,7 +37,7 @@ interface DealerStore {
         Dealer,
         "company_name" | "license_number" | "tax_id" | "telebirr_account"
       >
-    >
+    >,
   ) => Promise<void>;
 }
 
@@ -49,9 +49,10 @@ export const useProfileStore = create<DealerStore>((set) => ({
   getDealer: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api<Dealer>("/dealers/me/", {
+      const res = await api<Dealer>("/users/profiles/me/", {
         method: "GET",
       });
+      console.log("res", res);
       set({ dealer: res, isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
@@ -64,7 +65,7 @@ export const useProfileStore = create<DealerStore>((set) => ({
         Dealer,
         "company_name" | "license_number" | "tax_id" | "telebirr_account"
       >
-    >
+    >,
   ) => {
     set({ isLoading: true, error: null });
     try {

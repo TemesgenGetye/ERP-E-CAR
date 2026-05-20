@@ -436,13 +436,7 @@ export default function StaffPage() {
                         Added{" "}
                         {new Date(staffMember.assigned_at).toLocaleDateString()}
                       </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(staffMember)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+
                       <Button
                         variant="outline"
                         size="sm"
