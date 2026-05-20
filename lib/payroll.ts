@@ -8,7 +8,7 @@ export const createSalaryComponent = async (
   const credential = await getCredentials();
   const { access } = credential;
   try {
-    const response = await fetch(`${API_URL}/hr/salary-components`, {
+    const response = await fetch(`${API_URL}/hr/salary-components/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -43,7 +43,7 @@ export const getSalaryComponents = async () => {
   try {
     const credential = await getCredentials();
     const { access } = credential;
-    const response = await fetch(`${API_URL}/hr/salary-components`, {
+    const response = await fetch(`${API_URL}/hr/salary-components/`, {
       headers: {
         Authorization: `Bearer ${access}`,
       },
@@ -57,10 +57,39 @@ export const getSalaryComponents = async () => {
         "Failed to fetch salary components";
       throw new Error(errorMessage as string);
     }
-    return response.json();
+    const data = await response.json();
+    return Array.isArray(data) ? data : data?.results ?? [];
   } catch (error) {
     throw error;
   }
+};
+
+export type EmployeeSalaryAssignment = {
+  id: number;
+  employee: number;
+  component: number;
+  amount: string | number;
+};
+
+export const getEmployeeSalaries = async (): Promise<EmployeeSalaryAssignment[]> => {
+  const credential = await getCredentials();
+  const { access } = credential;
+  const response = await fetch(`${API_URL}/hr/employee-salaries/`, {
+    headers: {
+      Authorization: `Bearer ${access}`,
+    },
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage =
+      errorData?.detail ||
+      errorData?.message ||
+      errorData?.error ||
+      "Failed to fetch employee salaries";
+    throw new Error(errorMessage as string);
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data : data?.results ?? [];
 };
 
 export const assignSalaryComponent = async (

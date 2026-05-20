@@ -42,11 +42,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Contract, CreateContractRequest } from "@/types";
-import { Employee } from "@/types";
+import { DealerStaff } from "@/types";
+import { dealerStaffEmail, dealerStaffFullName } from "@/lib/dealerStaffDisplay";
 
 interface ContractsProps {
   contracts: Contract[];
-  employees: Employee[];
+  employees: DealerStaff[];
   createContract: (contract: CreateContractRequest) => Promise<void>;
   updateContract: (
     id: number,
@@ -281,16 +282,14 @@ export function ContractsComponent({
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
                     <SelectContent>
-                      {employees
-                        .filter((emp) => emp.is_active)
-                        .map((emp) => (
-                          <SelectItem
-                            key={emp.id}
-                            value={emp.user_email_display}
-                          >
-                            {emp.full_name} - {emp.position}
-                          </SelectItem>
-                        ))}
+                      {employees.map((emp) => (
+                        <SelectItem
+                          key={emp.id}
+                          value={dealerStaffEmail(emp)}
+                        >
+                          {dealerStaffFullName(emp)} — {emp.role}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

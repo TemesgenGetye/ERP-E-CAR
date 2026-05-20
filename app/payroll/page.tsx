@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Calendar,
   Search,
@@ -9,7 +9,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Plus,
-  MessageSquare,
   Trash2,
   FileUp,
   Filter,
@@ -56,7 +55,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api";
+import type { DealerStaff } from "@/types";
+import { dealerStaffFullName } from "@/lib/dealerStaffDisplay";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSalaryCpts } from "@/hooks/payroll";
+import type { EmployeeSalaryAssignment } from "@/lib/payroll";
+import { useUserRole } from "@/hooks/useUserRole";
 
 // Salary Component Type
 interface SalaryComponent {
@@ -76,95 +81,28 @@ interface Overtime {
   employee: number;
 }
 
-interface Employee {
-  id: number;
-  user_email_display: string;
-  full_name: string;
-  hire_date: string;
-  position: string;
-  salary: string;
-  is_active: boolean;
-}
-
-// Mock data matching the image
-const mockEmployees = [
-  {
-    id: 303940,
-    name: "Benjamin Thompson",
-    hasMessage: true,
-    basicSalary: 10500.0,
-    healthInsurance: 600.0,
-    totalSalary: 11100.0,
-    totalAdditions: 1600.0,
-    totalDeduction: 1400.0,
-  },
-  {
-    id: 493039,
-    name: "Emily Williams",
-    hasMessage: false,
-    basicSalary: 9500.0,
-    healthInsurance: 800.0,
-    totalSalary: 10300.0,
-    totalAdditions: 1150.0,
-    totalDeduction: 1520.0,
-  },
-  {
-    id: 384729,
-    name: "Michael Davis",
-    hasMessage: true,
-    basicSalary: 12000.0,
-    healthInsurance: 700.0,
-    totalSalary: 12700.0,
-    totalAdditions: 2000.0,
-    totalDeduction: 1800.0,
-  },
-  {
-    id: 293847,
-    name: "Sarah Johnson",
-    hasMessage: true,
-    basicSalary: 11000.0,
-    healthInsurance: 650.0,
-    totalSalary: 11650.0,
-    totalAdditions: 1750.0,
-    totalDeduction: 1650.0,
-  },
-  {
-    id: 192837,
-    name: "Matthew Brown",
-    hasMessage: true,
-    basicSalary: 10000.0,
-    healthInsurance: 750.0,
-    totalSalary: 10750.0,
-    totalAdditions: 1400.0,
-    totalDeduction: 1300.0,
-    hasDetail: true,
-  },
-  {
-    id: 485736,
-    name: "Joseph Rodriguez",
-    hasMessage: false,
-    basicSalary: 9800.0,
-    healthInsurance: 600.0,
-    totalSalary: 10400.0,
-    totalAdditions: 1200.0,
-    totalDeduction: 1450.0,
-  },
-];
-
 export default function PayrollPage() {
   const { toast } = useToast();
+  const { role } = useUserRole();
+  const hideCreates = role === "accountant";
+  const queryClient = useQueryClient();
+  const {
+    salaryCpts,
+    isLoadingSalaryComponents,
+    refetchSalaryCpts,
+  } = useSalaryCpts();
+
+  const salaryComponents = (salaryCpts ?? []) as SalaryComponent[];
+
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
-  const totalEmployees = 45;
-  const totalAmount = 4304940.0;
 
-  // Salary Components State
-  const [salaryComponents, setSalaryComponents] = useState<SalaryComponent[]>(
-    [],
-  );
-  const [isLoadingComponents, setIsLoadingComponents] = useState(false);
+  const [employeeSalaries, setEmployeeSalaries] = useState<
+    EmployeeSalaryAssignment[]
+  >([]);
+  const [isLoadingPayrollGrid, setIsLoadingPayrollGrid] = useState(true);
   const [showComponentDialog, setShowComponentDialog] = useState(false);
   const [editingComponent, setEditingComponent] =
     useState<SalaryComponent | null>(null);
@@ -175,7 +113,7 @@ export default function PayrollPage() {
 
   // Overtime State
   const [overtimeEntries, setOvertimeEntries] = useState<Overtime[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<DealerStaff[]>([]);
   const [isLoadingOvertime, setIsLoadingOvertime] = useState(false);
   const [showOvertimeDialog, setShowOvertimeDialog] = useState(false);
   const [editingOvertime, setEditingOvertime] = useState<Overtime | null>(null);
@@ -187,14 +125,6 @@ export default function PayrollPage() {
     employee: "",
   });
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedEmployees(mockEmployees.map((emp) => emp.id));
-    } else {
-      setSelectedEmployees([]);
-    }
-  };
-
   const handleSelectEmployee = (id: number, checked: boolean) => {
     if (checked) {
       setSelectedEmployees([...selectedEmployees, id]);
@@ -203,37 +133,142 @@ export default function PayrollPage() {
     }
   };
 
-  const isAllSelected =
-    selectedEmployees.length === mockEmployees.length &&
-    mockEmployees.length > 0;
-  const isIndeterminate =
-    selectedEmployees.length > 0 &&
-    selectedEmployees.length < mockEmployees.length;
-
-  const totalPages = Math.ceil(totalEmployees / itemsPerPage);
-
-  // Fetch Salary Components
-  const fetchSalaryComponents = async () => {
-    setIsLoadingComponents(true);
-    try {
-      const data = await api<SalaryComponent[]>("/hr/salary-components/", {
-        method: "GET",
-      });
-      setSalaryComponents(data);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to fetch salary components",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingComponents(false);
+  const componentById = useMemo(() => {
+    const m = new Map<number, SalaryComponent>();
+    for (const c of salaryComponents) {
+      m.set(c.id, c);
     }
-  };
+    return m;
+  }, [salaryComponents]);
+
+  const staffSalaryMetrics = useMemo(() => {
+    const map = new Map<
+      number,
+      {
+        basicSalary: number;
+        extraEarnings: number;
+        grossEarnings: number;
+        overtimeHours: number;
+        totalDeduction: number;
+      }
+    >();
+
+    for (const staff of employees) {
+      const lines = employeeSalaries.filter((l) => l.employee === staff.id);
+      const earningLines: { amount: number; name: string }[] = [];
+      let deduction = 0;
+
+      for (const line of lines) {
+        const c = componentById.get(line.component);
+        const amt = parseFloat(String(line.amount));
+        if (Number.isNaN(amt) || !c) continue;
+        if (c.component_type === "deduction") {
+          deduction += amt;
+        } else {
+          earningLines.push({ amount: amt, name: c.name || "" });
+        }
+      }
+
+      let basic = 0;
+      let extra = 0;
+      if (earningLines.length === 1) {
+        basic = earningLines[0].amount;
+      } else if (earningLines.length > 1) {
+        for (const el of earningLines) {
+          if (/\b(basic|base)\b/i.test(el.name)) {
+            basic += el.amount;
+          } else {
+            extra += el.amount;
+          }
+        }
+        if (basic === 0) {
+          basic = extra;
+          extra = 0;
+        }
+      }
+
+      const gross = basic + extra;
+      const otHours = overtimeEntries
+        .filter((o) => o.employee === staff.id && o.approved)
+        .reduce((s, o) => s + (parseFloat(String(o.hours)) || 0), 0);
+
+      map.set(staff.id, {
+        basicSalary: basic,
+        extraEarnings: extra,
+        grossEarnings: gross,
+        overtimeHours: otHours,
+        totalDeduction: deduction,
+      });
+    }
+    return map;
+  }, [employees, employeeSalaries, componentById, overtimeEntries]);
+
+  const filteredStaff = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return employees;
+    return employees.filter((s) => {
+      const name = dealerStaffFullName(s).toLowerCase();
+      const email = s.user.email.toLowerCase();
+      return (
+        name.includes(q) ||
+        email.includes(q) ||
+        String(s.id).includes(q) ||
+        String(s.user.id).includes(q)
+      );
+    });
+  }, [employees, searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalEmployees = filteredStaff.length;
+
+  const totalAmount = useMemo(() => {
+    return filteredStaff.reduce((sum, s) => {
+      const m = staffSalaryMetrics.get(s.id);
+      return sum + (m?.grossEarnings ?? 0);
+    }, 0);
+  }, [filteredStaff, staffSalaryMetrics]);
+
+  const totalPages = Math.max(1, Math.ceil(totalEmployees / itemsPerPage));
+
+  const pagedStaff = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredStaff.slice(start, start + itemsPerPage);
+  }, [filteredStaff, currentPage, itemsPerPage]);
+
+  const handleSelectAll = useCallback(
+    (checked: boolean) => {
+      if (checked) {
+        setSelectedEmployees(filteredStaff.map((s) => s.id));
+      } else {
+        setSelectedEmployees([]);
+      }
+    },
+    [filteredStaff],
+  );
+
+  const isAllSelected =
+    filteredStaff.length > 0 &&
+    filteredStaff.every((s) => selectedEmployees.includes(s.id));
+
+  const isIndeterminate =
+    selectedEmployees.some((id) =>
+      filteredStaff.some((s) => s.id === id),
+    ) && !isAllSelected;
 
   // Create or Update Salary Component
   const handleComponentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (hideCreates && !editingComponent) {
+      toast({
+        title: "Not allowed",
+        description: "Accountants cannot create salary components.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       if (editingComponent) {
         await api<SalaryComponent>(
@@ -262,7 +297,8 @@ export default function PayrollPage() {
       setShowComponentDialog(false);
       setEditingComponent(null);
       setComponentForm({ name: "", component_type: "earning" });
-      fetchSalaryComponents();
+      await queryClient.invalidateQueries({ queryKey: ["salary-components"] });
+      await refetchSalaryCpts();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -286,7 +322,8 @@ export default function PayrollPage() {
         description: "Salary component deleted successfully",
         variant: "success",
       });
-      fetchSalaryComponents();
+      await queryClient.invalidateQueries({ queryKey: ["salary-components"] });
+      await refetchSalaryCpts();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -309,7 +346,7 @@ export default function PayrollPage() {
   // Fetch Employees
   const fetchEmployees = async () => {
     try {
-      const data = await api<Employee[]>("/hr/employees/", {
+      const data = await api<DealerStaff[]>("/dealers/staff/", {
         method: "GET",
       });
       setEmployees(data);
@@ -317,6 +354,25 @@ export default function PayrollPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to fetch employees",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchEmployeeSalaries = async () => {
+    try {
+      const data = await api<
+        EmployeeSalaryAssignment[] | { results: EmployeeSalaryAssignment[] }
+      >("/hr/employee-salaries/", { method: "GET" });
+      const list = Array.isArray(data) ? data : data?.results ?? [];
+      setEmployeeSalaries(list);
+    } catch (error: any) {
+      setEmployeeSalaries([]);
+      toast({
+        title: "Error",
+        description:
+          error.message ||
+          "Failed to fetch employee salary assignments",
         variant: "destructive",
       });
     }
@@ -344,6 +400,14 @@ export default function PayrollPage() {
   // Create or Update Overtime Entry
   const handleOvertimeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (hideCreates && !editingOvertime) {
+      toast({
+        title: "Not allowed",
+        description: "Accountants cannot create overtime entries.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       const payload = {
         overtime_type: overtimeForm.overtime_type,
@@ -452,11 +516,25 @@ export default function PayrollPage() {
     }
   };
 
-  // Load data on mount
+  // Load staff, assignments, and overtime on mount
   useEffect(() => {
-    fetchSalaryComponents();
-    fetchEmployees();
-    fetchOvertime();
+    let cancelled = false;
+    (async () => {
+      setIsLoadingPayrollGrid(true);
+      try {
+        await Promise.all([
+          fetchEmployees(),
+          fetchEmployeeSalaries(),
+          fetchOvertime(),
+        ]);
+      } finally {
+        if (!cancelled) setIsLoadingPayrollGrid(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial load only
   }, []);
 
   return (
@@ -515,6 +593,13 @@ export default function PayrollPage() {
 
           {/* Employees Salary Tab */}
           <TabsContent value="employees-salary">
+            {isLoadingPayrollGrid ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : null}
+            {!isLoadingPayrollGrid && (
+            <>
             {/* Top Control Bar */}
             <div className="flex items-center gap-4 mb-6 flex-wrap">
               {/* Search */}
@@ -601,87 +686,93 @@ export default function PayrollPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockEmployees.map((employee) => (
-                      <TableRow key={employee.id} className="border-b">
-                        {/* Employee Details */}
-                        <TableCell className="bg-background">
-                          <Checkbox
-                            checked={selectedEmployees.includes(employee.id)}
-                            onCheckedChange={(checked) =>
-                              handleSelectEmployee(
-                                employee.id,
-                                checked as boolean,
-                              )
-                            }
-                          />
-                        </TableCell>
-                        <TableCell className="bg-background font-medium">
-                          {employee.id}
-                        </TableCell>
-                        <TableCell className="bg-background">
-                          <div className="flex items-center gap-2">
-                            {employee.name}
-                            {employee.hasMessage ? (
-                              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <Plus className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </div>
-                        </TableCell>
-
-                        {/* Earnings Section Header */}
-                        <TableCell className="bg-blue-50 dark:bg-blue-950/20"></TableCell>
-
-                        {/* Earnings */}
-                        <TableCell className="bg-blue-50 dark:bg-blue-950/20">
-                          {employee.basicSalary.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="bg-blue-50 dark:bg-blue-950/20">
-                          {employee.healthInsurance.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="bg-blue-50 dark:bg-blue-950/20 font-medium">
-                          {employee.totalSalary.toFixed(2)}
-                        </TableCell>
-
-                        {/* Additions Section Header */}
-                        <TableCell className="bg-green-50 dark:bg-green-950/20"></TableCell>
-
-                        {/* Additions */}
-                        <TableCell className="bg-green-50 dark:bg-green-950/20 font-medium">
-                          {employee.totalAdditions.toFixed(2)}
-                        </TableCell>
-
-                        {/* Deductions Section Header */}
-                        <TableCell className="bg-red-50 dark:bg-red-950/20"></TableCell>
-
-                        {/* Deductions */}
-                        <TableCell className="bg-red-50 dark:bg-red-950/20">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">
-                              {employee.totalDeduction.toFixed(2)}
-                            </span>
-                            {employee.hasDetail && (
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 px-2 text-xs"
-                                >
-                                  Detail
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
+                    {pagedStaff.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={11}
+                          className="text-center text-muted-foreground py-12"
+                        >
+                          {employees.length === 0
+                            ? "No dealer staff found. Add staff under Staff / HR first."
+                            : "No staff match your search."}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      pagedStaff.map((staff) => {
+                        const m = staffSalaryMetrics.get(staff.id);
+                        const basic = m?.basicSalary ?? 0;
+                        const extra = m?.extraEarnings ?? 0;
+                        const gross = m?.grossEarnings ?? 0;
+                        const otHrs = m?.overtimeHours ?? 0;
+                        const ded = m?.totalDeduction ?? 0;
+                        return (
+                          <TableRow key={staff.id} className="border-b">
+                            <TableCell className="bg-background">
+                              <Checkbox
+                                checked={selectedEmployees.includes(staff.id)}
+                                onCheckedChange={(checked) =>
+                                  handleSelectEmployee(
+                                    staff.id,
+                                    checked as boolean,
+                                  )
+                                }
+                              />
+                            </TableCell>
+                            <TableCell className="bg-background font-medium">
+                              {staff.id}
+                            </TableCell>
+                            <TableCell className="bg-background">
+                              <div className="flex flex-col">
+                                <span>{dealerStaffFullName(staff)}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {staff.user.email}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            <TableCell className="bg-blue-50 dark:bg-blue-950/20"></TableCell>
+
+                            <TableCell className="bg-blue-50 dark:bg-blue-950/20">
+                              {basic.toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </TableCell>
+                            <TableCell className="bg-blue-50 dark:bg-blue-950/20">
+                              {otHrs > 0
+                                ? `${otHrs.toFixed(1)} hrs`
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="bg-blue-50 dark:bg-blue-950/20 font-medium">
+                              {gross.toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </TableCell>
+
+                            <TableCell className="bg-green-50 dark:bg-green-950/20"></TableCell>
+
+                            <TableCell className="bg-green-50 dark:bg-green-950/20 font-medium">
+                              {extra.toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </TableCell>
+
+                            <TableCell className="bg-red-50 dark:bg-red-950/20"></TableCell>
+
+                            <TableCell className="bg-red-50 dark:bg-red-950/20">
+                              <span className="font-medium">
+                                {ded.toLocaleString("en-US", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -696,7 +787,7 @@ export default function PayrollPage() {
                     </span>
                     {" • "}
                     <span className="font-medium">
-                      Total amount $
+                      Total gross (assigned earnings) ETB{" "}
                       {totalAmount.toLocaleString("en-US", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
@@ -799,7 +890,7 @@ export default function PayrollPage() {
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <div className="text-2xl font-bold">
-                      $
+                      ETB{" "}
                       {totalAmount.toLocaleString("en-US", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
@@ -816,6 +907,8 @@ export default function PayrollPage() {
                 </div>
               </div>
             </div>
+            </>
+            )}
           </TabsContent>
 
           {/* Components Tab */}
@@ -832,20 +925,22 @@ export default function PayrollPage() {
                   open={showComponentDialog}
                   onOpenChange={setShowComponentDialog}
                 >
-                  <DialogTrigger asChild>
-                    <Button
-                      onClick={() => {
-                        setEditingComponent(null);
-                        setComponentForm({
-                          name: "",
-                          component_type: "earning",
-                        });
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Component
-                    </Button>
-                  </DialogTrigger>
+                  {!hideCreates && (
+                    <DialogTrigger asChild>
+                      <Button
+                        onClick={() => {
+                          setEditingComponent(null);
+                          setComponentForm({
+                            name: "",
+                            component_type: "earning",
+                          });
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Component
+                      </Button>
+                    </DialogTrigger>
+                  )}
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>
@@ -923,7 +1018,7 @@ export default function PayrollPage() {
                 </Dialog>
               </CardHeader>
               <CardContent>
-                {isLoadingComponents ? (
+                {isLoadingSalaryComponents ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
@@ -932,20 +1027,22 @@ export default function PayrollPage() {
                     <p className="text-muted-foreground mb-4">
                       No salary components found
                     </p>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditingComponent(null);
-                        setComponentForm({
-                          name: "",
-                          component_type: "earning",
-                        });
-                        setShowComponentDialog(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Component
-                    </Button>
+                    {!hideCreates && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setEditingComponent(null);
+                          setComponentForm({
+                            name: "",
+                            component_type: "earning",
+                          });
+                          setShowComponentDialog(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Your First Component
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="border border-border rounded-lg overflow-hidden">
@@ -1019,23 +1116,25 @@ export default function PayrollPage() {
                   </p>
                 </div>
                 <Dialog open={showOvertimeDialog} onOpenChange={setShowOvertimeDialog}>
-                  <DialogTrigger asChild>
-                    <Button
-                      onClick={() => {
-                        setEditingOvertime(null);
-                        setOvertimeForm({
-                          overtime_type: "1.5",
-                          hours: "",
-                          approved: false,
-                          date: new Date().toISOString().split("T")[0],
-                          employee: "",
-                        });
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Overtime Entry
-                    </Button>
-                  </DialogTrigger>
+                  {!hideCreates && (
+                    <DialogTrigger asChild>
+                      <Button
+                        onClick={() => {
+                          setEditingOvertime(null);
+                          setOvertimeForm({
+                            overtime_type: "1.5",
+                            hours: "",
+                            approved: false,
+                            date: new Date().toISOString().split("T")[0],
+                            employee: "",
+                          });
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Overtime Entry
+                      </Button>
+                    </DialogTrigger>
+                  )}
                   <DialogContent className="max-w-2xl">
                     <DialogHeader>
                       <DialogTitle>
@@ -1067,16 +1166,14 @@ export default function PayrollPage() {
                               <SelectValue placeholder="Select an employee" />
                             </SelectTrigger>
                             <SelectContent>
-                              {employees
-                                .filter((emp) => emp.is_active)
-                                .map((employee) => (
-                                  <SelectItem
-                                    key={employee.id}
-                                    value={employee.id.toString()}
-                                  >
-                                    {employee.full_name} ({employee.position})
-                                  </SelectItem>
-                                ))}
+                              {employees.map((employee) => (
+                                <SelectItem
+                                  key={employee.id}
+                                  value={employee.id.toString()}
+                                >
+                                  {dealerStaffFullName(employee)} ({employee.role})
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -1195,23 +1292,25 @@ export default function PayrollPage() {
                     <p className="text-muted-foreground mb-4">
                       No overtime entries found
                     </p>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditingOvertime(null);
-                        setOvertimeForm({
-                          overtime_type: "1.5",
-                          hours: "",
-                          approved: false,
-                          date: new Date().toISOString().split("T")[0],
-                          employee: "",
-                        });
-                        setShowOvertimeDialog(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Entry
-                    </Button>
+                    {!hideCreates && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setEditingOvertime(null);
+                          setOvertimeForm({
+                            overtime_type: "1.5",
+                            hours: "",
+                            approved: false,
+                            date: new Date().toISOString().split("T")[0],
+                            employee: "",
+                          });
+                          setShowOvertimeDialog(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Your First Entry
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="border border-border rounded-lg overflow-hidden">
@@ -1235,7 +1334,9 @@ export default function PayrollPage() {
                           return (
                             <TableRow key={entry.id}>
                               <TableCell className="font-medium">
-                                {employee?.full_name || `Employee #${entry.employee}`}
+                                {employee
+                                  ? dealerStaffFullName(employee)
+                                  : `Employee #${entry.employee}`}
                               </TableCell>
                               <TableCell>
                                 {new Date(entry.date).toLocaleDateString()}

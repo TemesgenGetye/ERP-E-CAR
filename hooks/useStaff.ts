@@ -1,6 +1,7 @@
 import { API_URL } from "@/lib/config";
 import { getCredentials } from "@/lib/credential";
 import { useQuery } from "@tanstack/react-query";
+import type { DealerStaff } from "@/types";
 
 
 export async function useStaff() {
@@ -14,7 +15,7 @@ export async function useStaff() {
           Authorization: `Bearer ${access}`,
         },
       });
-      return res.json();
+      return res.json() as Promise<DealerStaff[]>;
     },
   });
   return staffs;

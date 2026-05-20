@@ -64,7 +64,8 @@ export default function SignIn() {
                 dealerRole === "hr" ||
                 dealerRole === "dealer" ||
                 dealerRole === "accountant" ||
-                dealerRole === "seller"
+                dealerRole === "seller" ||
+                dealerRole === "finance"
               ) {
                 userRole = dealerRole as UserRole;
               }
@@ -84,6 +85,10 @@ export default function SignIn() {
                   userRole = "accountant";
                 } else if (currentUserStaff.role === "seller") {
                   userRole = "seller";
+                } else if (currentUserStaff.role === "hr") {
+                  userRole = "hr";
+                } else if (currentUserStaff.role === "finance") {
+                  userRole = "finance";
                 }
               }
             } catch (staffError) {}

@@ -1,8 +1,8 @@
 import { api } from "@/lib/api";
 import { create } from "zustand";
 import {
-  Employee,
-  CreateEmployeeRequest,
+  DealerStaff,
+  CreateDealerStaffRequest,
   Attendance,
   CreateAttendanceRequest,
   Contract,
@@ -12,18 +12,21 @@ import {
 } from "@/types";
 
 interface HRState {
-  // State
-  employees: Employee[];
+  // State (dealer staff from GET /dealers/staff/)
+  employees: DealerStaff[];
   attendances: Attendance[];
   contracts: Contract[];
   leaves: Leave[];
   isLoading: boolean;
   error: string | null;
 
-  // Employee actions
+  // Dealer staff (same payload as /dealers/staff/ API)
   getEmployees: () => Promise<void>;
-  createEmployee: (employee: CreateEmployeeRequest) => Promise<void>;
-  updateEmployee: (id: number, employee: Partial<CreateEmployeeRequest>) => Promise<void>;
+  createEmployee: (employee: CreateDealerStaffRequest) => Promise<void>;
+  updateEmployee: (
+    id: number,
+    employee: Partial<CreateDealerStaffRequest>,
+  ) => Promise<void>;
   deleteEmployee: (id: number) => Promise<void>;
 
   // Attendance actions
@@ -57,11 +60,10 @@ export const useHRStore = create<HRState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  // Employee actions
   getEmployees: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api<Employee[]>("/hr/employees/", {
+      const res = await api<DealerStaff[]>("/dealers/staff/", {
         method: "GET",
       });
       set({ employees: res, isLoading: false });
@@ -74,7 +76,7 @@ export const useHRStore = create<HRState>((set, get) => ({
   createEmployee: async (employee) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api<Employee>("/hr/employees/", {
+      const res = await api<DealerStaff>("/dealers/staff/", {
         method: "POST",
         body: employee as any,
       });
@@ -92,13 +94,13 @@ export const useHRStore = create<HRState>((set, get) => ({
   updateEmployee: async (id, employee) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api<Employee>(`/hr/employees/${id}/`, {
+      const res = await api<DealerStaff>(`/dealers/staff/${id}/`, {
         method: "PATCH",
         body: employee as any,
       });
       set((state) => ({
         employees: state.employees.map((emp) =>
-          emp.id === id ? res : emp
+          emp.id === id ? res : emp,
         ),
         isLoading: false,
       }));
@@ -112,7 +114,7 @@ export const useHRStore = create<HRState>((set, get) => ({
   deleteEmployee: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await api(`/hr/employees/${id}/`, {
+      await api(`/dealers/staff/${id}/`, {
         method: "DELETE",
       });
       set((state) => ({

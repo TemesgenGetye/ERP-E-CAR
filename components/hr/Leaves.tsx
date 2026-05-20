@@ -31,12 +31,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Leave, CreateLeaveRequest } from "@/types";
-import { Employee } from "@/types";
+import { DealerStaff } from "@/types";
+import { dealerStaffEmail, dealerStaffFullName } from "@/lib/dealerStaffDisplay";
 import { toast } from "sonner";
 
 interface LeavesProps {
   leaves: Leave[];
-  employees: Employee[];
+  employees: DealerStaff[];
   createLeave: (leave: CreateLeaveRequest) => Promise<void>;
   updateLeave: (id: number, leave: Partial<CreateLeaveRequest>) => Promise<void>;
   deleteLeave: (id: number) => Promise<void>;
@@ -166,8 +167,8 @@ export function LeavesComponent({
                     </SelectTrigger>
                     <SelectContent>
                       {employees.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.user_email_display}>
-                          {emp.full_name} - {emp.user_email_display}
+                        <SelectItem key={emp.id} value={dealerStaffEmail(emp)}>
+                          {dealerStaffFullName(emp)} — {dealerStaffEmail(emp)}
                         </SelectItem>
                       ))}
                     </SelectContent>

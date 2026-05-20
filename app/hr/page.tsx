@@ -71,7 +71,7 @@ export default function HRPage() {
     );
   }
 
-  const activeEmployees = employees.filter((emp) => emp.is_active).length;
+  const staffCount = employees.length;
   const presentAttendances = attendances.filter(
     (att) => att.status === "present",
   ).length;
@@ -107,7 +107,7 @@ export default function HRPage() {
             <CardContent>
               <div className="text-2xl font-bold">{employees.length}</div>
               <p className="text-xs text-muted-foreground">
-                {activeEmployees} active
+                {staffCount} staff member{staffCount !== 1 ? "s" : ""}
               </p>
             </CardContent>
           </Card>

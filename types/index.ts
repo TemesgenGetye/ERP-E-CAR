@@ -185,7 +185,7 @@ export interface Revenue {
   dealer: number;
 }
 
-// HR Types
+// HR Types — legacy shape for dedicated employee records (not dealer staff list).
 export interface Employee {
   id: number;
   user_email_display: string;

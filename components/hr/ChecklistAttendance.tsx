@@ -10,13 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Employee, Attendance, CreateAttendanceRequest } from "@/types";
+import { DealerStaff, Attendance, CreateAttendanceRequest } from "@/types";
+import { dealerStaffEmail, dealerStaffFullName } from "@/lib/dealerStaffDisplay";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
 interface ChecklistAttendanceProps {
-  employees: Employee[];
+  employees: DealerStaff[];
   attendances: Attendance[];
   createAttendance: (attendance: CreateAttendanceRequest) => Promise<void>;
   updateAttendance: (
@@ -204,8 +205,7 @@ export function ChecklistAttendanceComponent({
     }
   };
 
-  // Filter active employees
-  const activeEmployees = employees.filter((emp) => emp.is_active);
+  const activeEmployees = employees;
 
   return (
     <Card>
@@ -307,11 +307,11 @@ export function ChecklistAttendanceComponent({
                         className="border-b hover:bg-muted/30 transition-colors"
                       >
                         <td className="sticky left-0 z-10 bg-background border-r p-3 font-medium">
-                          {employee.full_name}
+                          {dealerStaffFullName(employee)}
                         </td>
                         {days.map((day) => {
                           const date = formatDate(day);
-                          const employeeEmail = employee.user_email_display;
+                          const employeeEmail = dealerStaffEmail(employee);
                           const isChecked =
                             attendanceData[employeeEmail]?.[date]?.checked ||
                             false;
@@ -334,7 +334,7 @@ export function ChecklistAttendanceComponent({
                                       checked as boolean
                                     )
                                   }
-                                  aria-label={`${employee.full_name} - Day ${day}`}
+                                  aria-label={`${dealerStaffFullName(employee)} - Day ${day}`}
                                 />
                               </div>
                             </td>
@@ -350,7 +350,7 @@ export function ChecklistAttendanceComponent({
         ) : (
           <div className="text-center py-8">
             <p className="text-muted-foreground">
-              No active employees found. Add employees to track attendance.
+              No staff found. Add staff on the Employees tab to track attendance.
             </p>
           </div>
         )}

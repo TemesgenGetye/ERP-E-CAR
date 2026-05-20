@@ -59,7 +59,7 @@ export const useCarStore = create<CarState>((set) => ({
       if (role === "seller" || role === "accountant" || role === "hr") {
         // Sellers can see all cars, try the general cars endpoint first
         try {
-          res = await api<Car[]>("/inventory/cars/", {
+          res = await api<Car[]>("/inventory/user-cars/", {
             method: "GET",
           });
         } catch (error) {

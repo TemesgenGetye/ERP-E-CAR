@@ -30,12 +30,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import { Attendance, CreateAttendanceRequest } from "@/types";
-import { Employee } from "@/types";
+import { Attendance, CreateAttendanceRequest, DealerStaff } from "@/types";
+import { dealerStaffEmail, dealerStaffFullName } from "@/lib/dealerStaffDisplay";
 
 interface AttendancesProps {
   attendances: Attendance[];
-  employees: Employee[];
+  employees: DealerStaff[];
   createAttendance: (attendance: CreateAttendanceRequest) => Promise<void>;
   updateAttendance: (
     id: number,
@@ -230,16 +230,14 @@ export function AttendancesComponent({
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
                     <SelectContent>
-                      {employees
-                        .filter((emp) => emp.is_active)
-                        .map((emp) => (
-                          <SelectItem
-                            key={emp.id}
-                            value={emp.user_email_display}
-                          >
-                            {emp.full_name} - {emp.position}
-                          </SelectItem>
-                        ))}
+                      {employees.map((emp) => (
+                        <SelectItem
+                          key={emp.id}
+                          value={dealerStaffEmail(emp)}
+                        >
+                          {dealerStaffFullName(emp)} — {emp.role}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
