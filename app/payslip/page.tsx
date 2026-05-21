@@ -21,7 +21,7 @@ interface PayslipItem {
 }
 
 export default function PayslipPage() {
-  const { payslipData, isLoadingPayslip, payslipError, refetchPayslip } =
+  const { payslipData, isLoadingPayslip, isRefetchingPayslip, payslipError, refetchPayslip } =
     usePayslip();
   const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
 
@@ -163,16 +163,16 @@ export default function PayslipPage() {
         <div className="mb-6">
           <Button
             onClick={() => refetchPayslip()}
-            disabled={isLoadingPayslip}
+            disabled={isLoadingPayslip || isRefetchingPayslip}
             variant="outline"
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefetchingPayslip ? "animate-spin" : ""}`} />
+            {isRefetchingPayslip ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
 
         {/* Payslip Data */}
-        {payslipData?.length === 0 ? (
+        {!payslipData ? (
           <Card className="shadow-none bg-transparent">
             <CardContent className="text-center py-8">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -183,96 +183,83 @@ export default function PayslipPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
-            {payslipData?.map((payslip: PayslipItem, index: number) => (
-              <Card key={index} className="shadow-none bg-transparent">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    {/* <div className="flex items-center space-x-2">
-                      <FileText className="h-5 w-5" />
-                      <CardTitle>Employee #{payslip.employee}</CardTitle>
-                    </div> */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => downloadPayslip(payslip, index)}
-                      disabled={downloadingIndex === index}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      {downloadingIndex === index ? "Generating..." : "Download"}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Earnings Section */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-green-700 mb-3">
-                        Earnings
-                      </h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between p-3 bg-green-50 rounded">
-                          <span className="font-medium">Gross Earnings:</span>
-                          <span className="font-bold text-green-700">
-                            {formatCurrency(payslip.gross_earnings)}
-                          </span>
+          <Card className="shadow-none bg-transparent">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                {/* <CardTitle>Employee #{payslipData.employee}</CardTitle> */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadPayslip(payslipData, 0)}
+                  disabled={downloadingIndex === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {downloadingIndex === 0 ? "Generating..." : "Download"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Earnings Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-green-700 mb-3">
+                    Earnings
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="p-3 bg-gray-50 rounded space-y-1">
+                      {payslipData.earnings.map((item, i) => (
+                        <div key={i} className="flex justify-between text-sm">
+                          <span>{item.name}</span>
+                          <span className="font-medium">{formatCurrency(item.amount)}</span>
                         </div>
-                        <div className="p-3 bg-gray-50 rounded space-y-1">
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Earnings Details:
-                          </p>
-                          {payslip.earnings.map((item, i) => (
-                            <div key={i} className="flex justify-between text-sm">
-                              <span>{item.name}</span>
-                              <span className="font-medium">{formatCurrency(item.amount)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      ))}
                     </div>
-
-                    {/* Deductions Section */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-red-700 mb-3">
-                        Deductions
-                      </h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between p-3 bg-red-50 rounded">
-                          <span className="font-medium">Total Deductions:</span>
-                          <span className="font-bold text-red-700">
-                            {formatCurrency(payslip.total_deductions)}
-                          </span>
-                        </div>
-                        <div className="p-3 bg-gray-50 rounded space-y-1">
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Deductions Details:
-                          </p>
-                          {payslip.deductions.map((item, i) => (
-                            <div key={i} className="flex justify-between text-sm">
-                              <span>{item.name}</span>
-                              <span className="font-medium">{formatCurrency(item.amount)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Net Salary */}
-                  <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-blue-800">
-                        Net Salary:
-                      </span>
-                      <span className="text-xl font-bold text-blue-800">
-                        {formatCurrency(payslip.net_salary)}
+                    <div className="flex justify-between p-3 bg-green-50 rounded">
+                      <span className="font-medium">Gross Earnings</span>
+                      <span className="font-bold text-green-700">
+                        {formatCurrency(payslipData.gross_earnings)}
                       </span>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </div>
+
+                {/* Deductions Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-red-700 mb-3">
+                    Deductions
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="p-3 bg-gray-50 rounded space-y-1">
+                      {payslipData.deductions.map((item, i) => (
+                        <div key={i} className="flex justify-between text-sm">
+                          <span>{item.name}</span>
+                          <span className="font-medium">{formatCurrency(item.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between p-3 bg-red-50 rounded">
+                      <span className="font-medium">Total Deductions</span>
+                      <span className="font-bold text-red-700">
+                        {formatCurrency(payslipData.total_deductions)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Net Salary */}
+              <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-bold text-blue-800">
+                    Net Salary
+                  </span>
+                  <span className="text-xl font-bold text-blue-800">
+                    {formatCurrency(payslipData.net_salary)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

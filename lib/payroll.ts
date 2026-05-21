@@ -28,7 +28,9 @@ export const createSalaryComponent = async (
         errorData?.name?.[0] ||
         errorData?.component_type?.[0] ||
         (typeof errorData === "object" && errorData !== null
-          ? Object.values(errorData).flat().find((v) => typeof v === "string")
+          ? Object.values(errorData)
+              .flat()
+              .find((v) => typeof v === "string")
           : null) ||
         "Failed to create salary component";
       throw new Error(errorMessage as string);
@@ -58,7 +60,7 @@ export const getSalaryComponents = async () => {
       throw new Error(errorMessage as string);
     }
     const data = await response.json();
-    return Array.isArray(data) ? data : data?.results ?? [];
+    return Array.isArray(data) ? data : (data?.results ?? []);
   } catch (error) {
     throw error;
   }
@@ -71,7 +73,9 @@ export type EmployeeSalaryAssignment = {
   amount: string | number;
 };
 
-export const getEmployeeSalaries = async (): Promise<EmployeeSalaryAssignment[]> => {
+export const getEmployeeSalaries = async (): Promise<
+  EmployeeSalaryAssignment[]
+> => {
   const credential = await getCredentials();
   const { access } = credential;
   const response = await fetch(`${API_URL}/hr/employee-salaries/`, {
@@ -89,7 +93,7 @@ export const getEmployeeSalaries = async (): Promise<EmployeeSalaryAssignment[]>
     throw new Error(errorMessage as string);
   }
   const data = await response.json();
-  return Array.isArray(data) ? data : data?.results ?? [];
+  return Array.isArray(data) ? data : (data?.results ?? []);
 };
 
 export const assignSalaryComponent = async (
@@ -121,7 +125,9 @@ export const assignSalaryComponent = async (
       errorData?.component?.[0] ||
       errorData?.amount?.[0] ||
       (typeof errorData === "object" && errorData !== null
-        ? Object.values(errorData).flat().find((v) => typeof v === "string")
+        ? Object.values(errorData)
+            .flat()
+            .find((v) => typeof v === "string")
         : null) ||
       "Failed to assign salary component";
     throw new Error(errorMessage as string);
@@ -163,7 +169,9 @@ export const createOvertime = async (
       errorData?.hours?.[0] ||
       errorData?.date?.[0] ||
       (typeof errorData === "object" && errorData !== null
-        ? Object.values(errorData).flat().find((v) => typeof v === "string")
+        ? Object.values(errorData)
+            .flat()
+            .find((v) => typeof v === "string")
         : null) ||
       "Failed to create overtime";
     throw new Error(errorMessage as string);
@@ -216,7 +224,9 @@ export const createPayrollRun = async (period: string) => {
       errorData?.non_field_errors?.[0] ||
       errorData?.period?.[0] ||
       (typeof errorData === "object" && errorData !== null
-        ? Object.values(errorData).flat().find((v) => typeof v === "string")
+        ? Object.values(errorData)
+            .flat()
+            .find((v) => typeof v === "string")
         : null) ||
       "Failed to create payroll run";
     throw new Error(errorMessage as string);
@@ -249,11 +259,12 @@ export const getPayslip = async () => {
   try {
     const credential = await getCredentials();
     const { access } = credential;
-    const response = await fetch(`${API_URL}/payroll/payslips`, {
+    const response = await fetch(`${API_URL}/payroll/payslips/me/`, {
       headers: {
         Authorization: `Bearer ${access}`,
       },
     });
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const errorMessage =
@@ -263,7 +274,8 @@ export const getPayslip = async () => {
         "Failed to fetch payslip";
       throw new Error(errorMessage as string);
     }
-    return response.json();
+    const data = await response.json();
+    return data;
   } catch (error) {
     throw error;
   }

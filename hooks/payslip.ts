@@ -22,6 +22,7 @@ export const usePayslip = () => {
   const {
     data: payslipData,
     isLoading: isLoadingPayslip,
+    isFetching: isRefetchingPayslip,
     error: payslipError,
     refetch: refetchPayslip,
   } = useQuery({
@@ -40,8 +41,9 @@ export const usePayslip = () => {
   }, [payslipError, toast]);
 
   return {
-    payslipData: payslipData as PayslipData[],
+    payslipData: payslipData as PayslipData | undefined,
     isLoadingPayslip,
+    isRefetchingPayslip,
     payslipError,
     refetchPayslip,
   };
