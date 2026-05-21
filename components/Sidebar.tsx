@@ -51,7 +51,7 @@ export default function Sidebar() {
       label: "Payroll",
       href: "/finance",
       icon: DollarSign,
-      roles: ["finance"],
+      roles: ["finance", "hr", "dealer"],
     },
     {
       label: "Payslip",

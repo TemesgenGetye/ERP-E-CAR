@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getPayslip } from "@/lib/payroll";
+import { getPayslip, getAllPayslips } from "@/lib/payroll";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
@@ -30,15 +30,37 @@ export const usePayslip = () => {
     queryFn: () => getPayslip(),
   });
 
+  const {
+    data: allPayslipsData,
+    isLoading: isLoadingAllPayslips,
+    isFetching: isRefetchingAllPayslips,
+    error: allPayslipsError,
+    refetch: refetchAllPayslips,
+  } = useQuery({
+    queryKey: ["all-payslips"],
+    queryFn: () => getAllPayslips(),
+    enabled: false,
+  });
+
   useEffect(() => {
     if (payslipError) {
       toast({
-        title: "Error",
-        description: "Failed to fetch payslip data",
+        title: "Failed to fetch payslip",
+        description: (payslipError as Error).message,
         variant: "destructive",
       });
     }
   }, [payslipError, toast]);
+
+  useEffect(() => {
+    if (allPayslipsError) {
+      toast({
+        title: "Failed to fetch payslips",
+        description: (allPayslipsError as Error).message,
+        variant: "destructive",
+      });
+    }
+  }, [allPayslipsError, toast]);
 
   return {
     payslipData: payslipData as PayslipData | undefined,
@@ -46,5 +68,9 @@ export const usePayslip = () => {
     isRefetchingPayslip,
     payslipError,
     refetchPayslip,
+    allPayslipsData: allPayslipsData as PayslipData[] | undefined,
+    isLoadingAllPayslips,
+    isRefetchingAllPayslips,
+    refetchAllPayslips,
   };
 };

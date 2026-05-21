@@ -179,6 +179,30 @@ export const createOvertime = async (
   return response.json();
 };
 
+export const approvePayrollRun = async (id: number) => {
+  const credential = await getCredentials();
+  const { access } = credential;
+  const response = await fetch(
+    `${API_URL}/payroll/payroll-runs/${id}/approve/`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${access}`,
+      },
+    }
+  );
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage =
+      errorData?.detail ||
+      errorData?.message ||
+      errorData?.error ||
+      "Failed to approve payroll run";
+    throw new Error(errorMessage as string);
+  }
+  return response.json();
+};
+
 export const getPayrollRuns = async () => {
   try {
     const credential = await getCredentials();
@@ -214,6 +238,7 @@ export const createPayrollRun = async (period: string) => {
     },
     body: JSON.stringify({
       period,
+      status: "draft",
     }),
   });
   if (!response.ok) {
@@ -253,6 +278,31 @@ export const runPayroll = async (id: number) => {
     throw new Error(errorMessage as string);
   }
   return response.json();
+};
+
+export const getAllPayslips = async () => {
+  try {
+    const credential = await getCredentials();
+    const { access } = credential;
+    const response = await fetch(`${API_URL}/payroll/payslips/`, {
+      headers: {
+        Authorization: `Bearer ${access}`,
+      },
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        errorData?.detail ||
+        errorData?.message ||
+        errorData?.error ||
+        "Failed to fetch payslips";
+      throw new Error(errorMessage as string);
+    }
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data?.results ?? []);
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const getPayslip = async () => {

@@ -4,11 +4,14 @@ import { useState } from "react";
 import {
   Plus,
   Play,
-  Calendar,
+  Calendar as CalendarIcon,
   CheckCircle,
   Clock,
   AlertCircle,
+  ThumbsUp,
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { usePayrollRuns } from "@/hooks/payrollRuns";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface PayrollRun {
   id: number;
@@ -41,33 +45,44 @@ interface PayrollRun {
 
 export default function FinancePage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<Date | undefined>(
+    undefined,
+  );
   const { toast } = useToast();
+  const { role } = useUserRole();
   const {
     payrollRuns,
     isLoadingPayrollRuns,
     payrollRunsError,
     createPayroll,
     runPayrollById,
+    approvePayrollById,
     isCreatingPayroll,
     isRunningPayroll,
+    isApprovingPayroll,
   } = usePayrollRuns();
 
+  const isHR = role === "hr";
+  const isDealer = role === "dealer";
+  const isFinance = role === "finance";
+
   const handleCreatePayroll = async () => {
+    if (!selectedPeriod) return;
     try {
-      const period = new Date().toISOString();
+      const period = format(selectedPeriod, "yyyy-MM-dd");
       await createPayroll(period);
       setShowCreateDialog(false);
+      setSelectedPeriod(undefined);
       toast({
-        title: "Payroll Succeess",
+        title: "Payroll Created",
         variant: "success",
-        description: "Payroll sucessfully created for the peirod.",
+        description: `Payroll created for ${period}.`,
       });
     } catch (error) {
-      console.error("Error creating payroll:", error);
       toast({
         title: "Failed to create payroll",
         variant: "destructive",
-        description: "Please try again.",
+        description: (error as Error).message,
       });
     }
   };
@@ -76,16 +91,32 @@ export default function FinancePage() {
     try {
       await runPayrollById(id);
       toast({
-        title: "Payroll run started successfully",
+        title: "Payroll Run Started",
         variant: "success",
         description: "Payroll run started successfully.",
       });
     } catch (error) {
-      console.error("Error running payroll:", error);
       toast({
         title: "Failed to run payroll",
         variant: "destructive",
-        description: "Please try again.",
+        description: (error as Error).message,
+      });
+    }
+  };
+
+  const handleApprovePayroll = async (id: number) => {
+    try {
+      await approvePayrollById(id);
+      toast({
+        title: "Payroll Approved",
+        variant: "success",
+        description: "Payroll run approved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to approve payroll",
+        variant: "destructive",
+        description: (error as Error).message,
       });
     }
   };
@@ -147,10 +178,10 @@ export default function FinancePage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Finance Management
+            Payroll Management
           </h1>
           <p className="text-muted-foreground">
-            Manage payroll runs and financial operations
+            View and manage payroll runs and financial operations
           </p>
         </div>
 
@@ -163,42 +194,63 @@ export default function FinancePage() {
                 View and manage payroll processing schedules
               </p>
             </div>
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Payroll
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Payroll Run</DialogTitle>
-                  <DialogDescription>
-                    Create a new payroll run for the current period.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                  <p className="text-sm text-muted-foreground">
-                    A new payroll run will be created with the current timestamp
-                    as the period.
-                  </p>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowCreateDialog(false)}
-                  >
-                    Cancel
+
+            {/* Only Finance can create payroll */}
+            {isFinance && (
+              <Dialog
+                open={showCreateDialog}
+                onOpenChange={setShowCreateDialog}
+              >
+                <DialogTrigger asChild>
+                  <Button className="cursor-pointer">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Payroll
                   </Button>
-                  <Button
-                    onClick={handleCreatePayroll}
-                    disabled={isCreatingPayroll}
-                  >
-                    {isCreatingPayroll ? "Creating..." : "Create Payroll"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Payroll Run</DialogTitle>
+                    <DialogDescription>
+                      Create a new payroll run for the current period.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4 space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Select the period date for this payroll run.
+                    </p>
+                    {selectedPeriod && (
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                        {format(selectedPeriod, "PPP")}
+                      </p>
+                    )}
+                    <Calendar
+                      mode="single"
+                      selected={selectedPeriod}
+                      onSelect={setSelectedPeriod}
+                      className="rounded-md border mx-auto"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowCreateDialog(false);
+                        setSelectedPeriod(undefined);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleCreatePayroll}
+                      disabled={isCreatingPayroll || !selectedPeriod}
+                    >
+                      {isCreatingPayroll ? "Creating..." : "Create Payroll"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
           </CardHeader>
           <CardContent>
             <Table>
@@ -219,7 +271,9 @@ export default function FinancePage() {
                         No payroll runs found
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Create your first payroll run to get started
+                        {isFinance
+                          ? "Create your first payroll run to get started"
+                          : "No payroll runs available yet"}
                       </p>
                     </TableCell>
                   </TableRow>
@@ -231,7 +285,7 @@ export default function FinancePage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                           {new Date(payroll.period).toLocaleDateString()}
                         </div>
                       </TableCell>
@@ -240,17 +294,31 @@ export default function FinancePage() {
                         {new Date(payroll.created_at).toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRunPayroll(payroll.id)}
-                          disabled={
-                            payroll.status !== "draft" || isRunningPayroll
-                          }
-                        >
-                          <Play className="h-4 w-4 mr-1" />
-                          {isRunningPayroll ? "Running..." : "Run Payroll"}
-                        </Button>
+                        {isDealer && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleApprovePayroll(payroll.id)}
+                            disabled={isApprovingPayroll}
+                            className="cursor-pointer"
+                          >
+                            <ThumbsUp className="h-4 w-4 mr-1" />
+                            {isApprovingPayroll ? "Approving..." : "Approve"}
+                          </Button>
+                        )}
+                        {isHR && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleRunPayroll(payroll.id)}
+                            disabled={
+                              payroll.status !== "draft" || isRunningPayroll
+                            }
+                            className="cursor-pointer"
+                          >
+                            <Play className="h-4 w-4 mr-1" />
+                            {isRunningPayroll ? "Running..." : "Run Payroll"}
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
