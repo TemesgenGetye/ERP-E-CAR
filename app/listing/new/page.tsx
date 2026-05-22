@@ -380,6 +380,31 @@ export default function PostCarScreen() {
     }));
   };
 
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageFiles = Array.from(items)
+        .filter((item) => item.type.startsWith("image/"))
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => f !== null);
+      if (imageFiles.length === 0) return;
+      const newImages: CarImage[] = imageFiles.map((file, index) => ({
+        image_file: URL.createObjectURL(file),
+        is_feature:
+          formData.uploaded_images.length === 0 && index === 0 ? "True" : "False",
+        caption: "Pasted image",
+        file,
+      }));
+      setFormData((prev) => ({
+        ...prev,
+        uploaded_images: [...prev.uploaded_images, ...newImages],
+      }));
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [formData.uploaded_images.length]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const files = Array.from(e.target.files);
@@ -996,6 +1021,12 @@ export default function PostCarScreen() {
               />
             </label>
           </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            Tip: You can paste images directly with{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">Ctrl+V</kbd>{" "}
+            /{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">⌘V</kbd>
+          </p>
         </section>
 
         {/* Features */}

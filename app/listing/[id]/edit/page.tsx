@@ -390,6 +390,30 @@ export default function EditCarScreen() {
     }));
   };
 
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageFiles = Array.from(items)
+        .filter((item) => item.type.startsWith("image/"))
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => f !== null);
+      if (imageFiles.length === 0) return;
+      const newImages: CarImage[] = imageFiles.map((file) => ({
+        image_file: URL.createObjectURL(file),
+        is_feature: "False",
+        caption: "Pasted image",
+        file,
+      }));
+      setFormData((prev) => ({
+        ...prev,
+        uploaded_images: [...prev.uploaded_images, ...newImages],
+      }));
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const files = Array.from(e.target.files);
@@ -651,6 +675,12 @@ export default function EditCarScreen() {
                 />
               </label>
             </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Tip: You can paste images directly with{" "}
+              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">Ctrl+V</kbd>{" "}
+              /{" "}
+              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">⌘V</kbd>
+            </p>
           </section>
 
           {/* Core Info */}
