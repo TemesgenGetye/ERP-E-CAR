@@ -136,7 +136,7 @@ export default function PayslipPage() {
   const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("mine");
 
-  const isFinance = role === "finance";
+  const isFinance = role === "finance" || role === "accountant";
 
   const downloadPayslip = async (payslip: PayslipItem, index: number) => {
     setDownloadingIndex(index);

@@ -179,6 +179,27 @@ export const createOvertime = async (
   return response.json();
 };
 
+export const postPayrollRun = async (id: number) => {
+  const credential = await getCredentials();
+  const { access } = credential;
+  const response = await fetch(`${API_URL}/payroll/payroll-runs/${id}/post/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${access}`,
+    },
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage =
+      errorData?.detail ||
+      errorData?.message ||
+      errorData?.error ||
+      "Failed to post payroll run";
+    throw new Error(errorMessage as string);
+  }
+  return response.json();
+};
+
 export const approvePayrollRun = async (id: number) => {
   const credential = await getCredentials();
   const { access } = credential;

@@ -62,8 +62,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSalaryCpts } from "@/hooks/payroll";
 import type { EmployeeSalaryAssignment } from "@/lib/payroll";
 import { useUserRole } from "@/hooks/useUserRole";
+import { usePayrollRuns } from "@/hooks/payrollRuns";
+import { Badge } from "@/components/ui/badge";
+import {
+  Play,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+} from "lucide-react";
 
-// Salary Component Type
 interface SalaryComponent {
   id: number;
   name: string;
@@ -81,16 +88,126 @@ interface Overtime {
   employee: number;
 }
 
-export default function PayrollPage() {
-  const { toast } = useToast();
-  const { role } = useUserRole();
-  const hideCreates = role === "accountant";
-  const queryClient = useQueryClient();
+function AccountantPayrollView() {
   const {
-    salaryCpts,
-    isLoadingSalaryComponents,
-    refetchSalaryCpts,
-  } = useSalaryCpts();
+    payrollRuns,
+    isLoadingPayrollRuns,
+    payrollRunsError,
+  } = usePayrollRuns();
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "draft":
+        return (
+          <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+            <Clock className="h-3 w-3 mr-1" />Draft
+          </Badge>
+        );
+      case "running":
+        return (
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+            <Play className="h-3 w-3 mr-1" />Running
+          </Badge>
+        );
+      case "completed":
+        return (
+          <Badge variant="secondary" className="bg-green-100 text-green-800">
+            <CheckCircle className="h-3 w-3 mr-1" />Completed
+          </Badge>
+        );
+      case "failed":
+        return (
+          <Badge variant="secondary" className="bg-red-100 text-red-800">
+            <AlertCircle className="h-3 w-3 mr-1" />Failed
+          </Badge>
+        );
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  if (isLoadingPayrollRuns) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-muted-foreground">Loading payroll data...</p>
+      </div>
+    );
+  }
+
+  if (payrollRunsError) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-red-500">Error loading payroll data</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="p-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Payroll Management</h1>
+          <p className="text-muted-foreground">View payroll runs and financial operations</p>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Payroll Runs</CardTitle>
+            <p className="text-sm text-muted-foreground">View payroll processing schedules</p>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>Period</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created At</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {!payrollRuns?.length ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      No payroll runs available yet
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  payrollRuns.map((payroll: any) => (
+                    <TableRow key={payroll.id}>
+                      <TableCell className="font-medium">{payroll.id}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          {new Date(payroll.period).toLocaleDateString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(payroll.status)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(payroll.created_at).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export default function PayrollPage() {
+  const { role } = useUserRole();
+  if (role === "accountant") return <AccountantPayrollView />;
+  return <HRPayrollContent />;
+}
+
+function HRPayrollContent() {
+  const { toast } = useToast();
+  const hideCreates = false;
+  const queryClient = useQueryClient();
+  const { salaryCpts } = useSalaryCpts();
 
   const salaryComponents = (salaryCpts ?? []) as SalaryComponent[];
 
@@ -103,14 +220,6 @@ export default function PayrollPage() {
     EmployeeSalaryAssignment[]
   >([]);
   const [isLoadingPayrollGrid, setIsLoadingPayrollGrid] = useState(true);
-  const [showComponentDialog, setShowComponentDialog] = useState(false);
-  const [editingComponent, setEditingComponent] =
-    useState<SalaryComponent | null>(null);
-  const [componentForm, setComponentForm] = useState({
-    name: "",
-    component_type: "earning" as "earning" | "deduction",
-  });
-
   // Overtime State
   const [overtimeEntries, setOvertimeEntries] = useState<Overtime[]>([]);
   const [employees, setEmployees] = useState<DealerStaff[]>([]);
@@ -257,91 +366,6 @@ export default function PayrollPage() {
     selectedEmployees.some((id) =>
       filteredStaff.some((s) => s.id === id),
     ) && !isAllSelected;
-
-  // Create or Update Salary Component
-  const handleComponentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (hideCreates && !editingComponent) {
-      toast({
-        title: "Not allowed",
-        description: "Accountants cannot create salary components.",
-        variant: "destructive",
-      });
-      return;
-    }
-    try {
-      if (editingComponent) {
-        await api<SalaryComponent>(
-          `/hr/salary-components/${editingComponent.id}/`,
-          {
-            method: "PATCH",
-            body: componentForm,
-          } as any,
-        );
-        toast({
-          title: "Success",
-          description: "Salary component updated successfully",
-          variant: "success",
-        });
-      } else {
-        await api<SalaryComponent>("/hr/salary-components/", {
-          method: "POST",
-          body: componentForm,
-        } as any);
-        toast({
-          title: "Success",
-          description: "Salary component created successfully",
-          variant: "success",
-        });
-      }
-      setShowComponentDialog(false);
-      setEditingComponent(null);
-      setComponentForm({ name: "", component_type: "earning" });
-      await queryClient.invalidateQueries({ queryKey: ["salary-components"] });
-      await refetchSalaryCpts();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save salary component",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Delete Salary Component
-  const handleDeleteComponent = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this salary component?")) {
-      return;
-    }
-    try {
-      await api(`/hr/salary-components/${id}/`, {
-        method: "DELETE",
-      });
-      toast({
-        title: "Success",
-        description: "Salary component deleted successfully",
-        variant: "success",
-      });
-      await queryClient.invalidateQueries({ queryKey: ["salary-components"] });
-      await refetchSalaryCpts();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete salary component",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handle Edit
-  const handleEditComponent = (component: SalaryComponent) => {
-    setEditingComponent(component);
-    setComponentForm({
-      name: component.name,
-      component_type: component.component_type,
-    });
-    setShowComponentDialog(true);
-  };
 
   // Fetch Employees
   const fetchEmployees = async () => {
@@ -576,12 +600,6 @@ export default function PayrollPage() {
               className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary cursor-pointer"
             >
               Employees Salary
-            </TabsTrigger>
-            <TabsTrigger
-              value="components"
-              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary cursor-pointer"
-            >
-              Components
             </TabsTrigger>
             <TabsTrigger
               value="overtime"
@@ -897,212 +915,20 @@ export default function PayrollPage() {
                       })}
                     </div>
                   </div>
-                  <Button
-                    size="lg"
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    Submit payroll
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
+                  {true && (
+                    <Button
+                      size="lg"
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      Submit payroll
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
             </>
             )}
-          </TabsContent>
-
-          {/* Components Tab */}
-          <TabsContent value="components">
-            <Card className="border border-border rounded-lg bg-transparent overflow-hidden shadow-none">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Salary Components</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Manage salary components used in payroll calculations
-                  </p>
-                </div>
-                <Dialog
-                  open={showComponentDialog}
-                  onOpenChange={setShowComponentDialog}
-                >
-                  {!hideCreates && (
-                    <DialogTrigger asChild>
-                      <Button
-                        onClick={() => {
-                          setEditingComponent(null);
-                          setComponentForm({
-                            name: "",
-                            component_type: "earning",
-                          });
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Component
-                      </Button>
-                    </DialogTrigger>
-                  )}
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editingComponent
-                          ? "Edit Salary Component"
-                          : "Add New Salary Component"}
-                      </DialogTitle>
-                      <DialogDescription>
-                        {editingComponent
-                          ? "Update the salary component details below."
-                          : "Create a new salary component that can be assigned to employees."}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleComponentSubmit}>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="name">Component Name</Label>
-                          <Input
-                            id="name"
-                            value={componentForm.name}
-                            onChange={(e) =>
-                              setComponentForm({
-                                ...componentForm,
-                                name: e.target.value,
-                              })
-                            }
-                            placeholder="e.g., Basic Salary, Health Insurance"
-                            required
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="component_type">Component Type</Label>
-                          <Select
-                            value={componentForm.component_type}
-                            onValueChange={(value: "earning" | "deduction") =>
-                              setComponentForm({
-                                ...componentForm,
-                                component_type: value,
-                              })
-                            }
-                          >
-                            <SelectTrigger id="component_type">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="earning">Earning</SelectItem>
-                              <SelectItem value="deduction">
-                                Deduction
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setShowComponentDialog(false);
-                            setEditingComponent(null);
-                            setComponentForm({
-                              name: "",
-                              component_type: "earning",
-                            });
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button type="submit">
-                          {editingComponent ? "Update" : "Create"}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent>
-                {isLoadingSalaryComponents ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : salaryComponents.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <p className="text-muted-foreground mb-4">
-                      No salary components found
-                    </p>
-                    {!hideCreates && (
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setEditingComponent(null);
-                          setComponentForm({
-                            name: "",
-                            component_type: "earning",
-                          });
-                          setShowComponentDialog(true);
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Your First Component
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="border border-border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ID</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {salaryComponents.map((component) => (
-                          <TableRow key={component.id}>
-                            <TableCell className="font-medium">
-                              {component.id}
-                            </TableCell>
-                            <TableCell>{component.name}</TableCell>
-                            <TableCell>
-                              <span
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                  component.component_type === "earning"
-                                    ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400"
-                                    : "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400"
-                                }`}
-                              >
-                                {component.component_type === "earning"
-                                  ? "Earning"
-                                  : "Deduction"}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditComponent(component)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleDeleteComponent(component.id)
-                                  }
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Overtime Tab */}
@@ -1323,7 +1149,7 @@ export default function PayrollPage() {
                           <TableHead>Type</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Created</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          {true && <TableHead className="text-right">Actions</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1349,12 +1175,14 @@ export default function PayrollPage() {
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-2">
-                                  <Switch
-                                    checked={entry.approved}
-                                    onCheckedChange={() =>
-                                      handleToggleApproval(entry)
-                                    }
-                                  />
+                                  {true ? (
+                                    <Switch
+                                      checked={entry.approved}
+                                      onCheckedChange={() =>
+                                        handleToggleApproval(entry)
+                                      }
+                                    />
+                                  ) : null}
                                   <span
                                     className={`text-xs ${
                                       entry.approved
@@ -1369,26 +1197,28 @@ export default function PayrollPage() {
                               <TableCell className="text-sm text-muted-foreground">
                                 {new Date(entry.created_at).toLocaleDateString()}
                               </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEditOvertime(entry)}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleDeleteOvertime(entry.id)
-                                    }
-                                  >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </div>
-                              </TableCell>
+                              {true && (
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleEditOvertime(entry)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleDeleteOvertime(entry.id)
+                                      }
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              )}
                             </TableRow>
                           );
                         })}

@@ -45,9 +45,7 @@ interface PayrollRun {
 
 export default function FinancePage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<Date | undefined>(
-    undefined,
-  );
+  const [selectedPeriod, setSelectedPeriod] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
   const { role } = useUserRole();
   const {
@@ -57,9 +55,11 @@ export default function FinancePage() {
     createPayroll,
     runPayrollById,
     approvePayrollById,
+    postPayrollById,
     isCreatingPayroll,
     isRunningPayroll,
     isApprovingPayroll,
+    isPostingPayroll,
   } = usePayrollRuns();
 
   const isHR = role === "hr";
@@ -72,7 +72,7 @@ export default function FinancePage() {
       const period = format(selectedPeriod, "yyyy-MM-dd");
       await createPayroll(period);
       setShowCreateDialog(false);
-      setSelectedPeriod(undefined);
+      setSelectedPeriod(new Date());
       toast({
         title: "Payroll Created",
         variant: "success",
@@ -98,6 +98,23 @@ export default function FinancePage() {
     } catch (error) {
       toast({
         title: "Failed to run payroll",
+        variant: "destructive",
+        description: (error as Error).message,
+      });
+    }
+  };
+
+  const handlePostPayroll = async (id: number) => {
+    try {
+      await postPayrollById(id);
+      toast({
+        title: "Payroll Posted",
+        variant: "success",
+        description: "Payroll run posted successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to post payroll",
         variant: "destructive",
         description: (error as Error).message,
       });
@@ -227,7 +244,7 @@ export default function FinancePage() {
                     <Calendar
                       mode="single"
                       selected={selectedPeriod}
-                      onSelect={setSelectedPeriod}
+                      onSelect={(date) => date && setSelectedPeriod(date)}
                       className="rounded-md border mx-auto"
                     />
                   </div>
@@ -236,7 +253,7 @@ export default function FinancePage() {
                       variant="outline"
                       onClick={() => {
                         setShowCreateDialog(false);
-                        setSelectedPeriod(undefined);
+                        setSelectedPeriod(new Date());
                       }}
                     >
                       Cancel
@@ -317,6 +334,17 @@ export default function FinancePage() {
                           >
                             <Play className="h-4 w-4 mr-1" />
                             {isRunningPayroll ? "Running..." : "Run Payroll"}
+                          </Button>
+                        )}
+                        {isFinance && (
+                          <Button
+                            size="sm"
+                            onClick={() => handlePostPayroll(payroll.id)}
+                            disabled={isPostingPayroll}
+                            className="cursor-pointer"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            {isPostingPayroll ? "Posting..." : "Post"}
                           </Button>
                         )}
                       </TableCell>

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPayrollRuns, createPayrollRun, runPayroll, approvePayrollRun } from "@/lib/payroll";
+import { getPayrollRuns, createPayrollRun, runPayroll, approvePayrollRun, postPayrollRun } from "@/lib/payroll";
 
 export const usePayrollRuns = () => {
   const queryClient = useQueryClient();
@@ -34,6 +34,13 @@ export const usePayrollRuns = () => {
     },
   });
 
+  const postPayrollMutation = useMutation({
+    mutationFn: (id: number) => postPayrollRun(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payroll-runs"] });
+    },
+  });
+
   const createPayroll = async (period: string) => {
     return createPayrollMutation.mutateAsync(period);
   };
@@ -46,6 +53,10 @@ export const usePayrollRuns = () => {
     return approvePayrollMutation.mutateAsync(id);
   };
 
+  const postPayrollById = async (id: number) => {
+    return postPayrollMutation.mutateAsync(id);
+  };
+
   return {
     payrollRuns,
     isLoadingPayrollRuns,
@@ -53,8 +64,10 @@ export const usePayrollRuns = () => {
     createPayroll,
     runPayrollById,
     approvePayrollById,
+    postPayrollById,
     isCreatingPayroll: createPayrollMutation.isPending,
     isRunningPayroll: runPayrollMutation.isPending,
     isApprovingPayroll: approvePayrollMutation.isPending,
+    isPostingPayroll: postPayrollMutation.isPending,
   };
 };
