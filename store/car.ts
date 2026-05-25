@@ -153,7 +153,7 @@ export const useCarStore = create<CarState>((set) => ({
   updateCar: async (id: string, car: FormData) => {
     set({ isLoading: true, error: null });
     try {
-      await api<Car>(`/inventory/cars/${id}/`, {
+      await api<Car>(`/inventory/cars/${id}`, {
         method: "PATCH",
         body: car,
       });

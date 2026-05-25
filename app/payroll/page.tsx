@@ -198,7 +198,12 @@ function AccountantPayrollView() {
 }
 
 export default function PayrollPage() {
-  const { role } = useUserRole();
+  const { role, isLoading } = useUserRole();
+  if (isLoading || !role) return (
+    <div className="flex items-center justify-center h-screen">
+      <Loader2 className="animate-spin text-muted-foreground" size={28} />
+    </div>
+  );
   if (role === "accountant") return <AccountantPayrollView />;
   return <HRPayrollContent />;
 }

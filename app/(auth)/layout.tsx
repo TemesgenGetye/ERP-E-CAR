@@ -6,9 +6,7 @@ export default function layout({
   children: React.ReactNode;
 }>) {
   return (
-    <div
-      className="h-screen w-screen grid place-items-center fixed top-0 left-0"
-    >
+    <div className="min-h-screen w-full flex items-center justify-center p-4">
       {children}
     </div>
   );

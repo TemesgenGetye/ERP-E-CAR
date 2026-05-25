@@ -110,7 +110,7 @@ export default function SignIn() {
   };
 
   return (
-    <Card className="w-[450px]">
+    <Card className="w-full max-w-[450px]">
       <CardHeader>
         <Link href={"/"} className="flex items-center justify-center gap-2 cursor-pointer">
           <Image

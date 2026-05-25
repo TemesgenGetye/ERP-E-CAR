@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useCarData } from "@/hooks/useCarData";
 import { useRouter, useParams } from "next/navigation";
 import { useProfile } from "@/hooks/useProfile";
@@ -299,6 +299,11 @@ export default function EditCarScreen() {
   const router = useRouter();
   const [formData, setFormData] = useState<CarFormData>(getInitialFormData());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [existingImages, setExistingImages] = useState<{ id: number; image_url: string; is_feature: string; caption: string }[]>([]);
+  const existingImagesInitialized = useRef(false);
+  const [featuredSource, setFeaturedSource] = useState<"existing" | "new">("new");
+  const [featuredExistingId, setFeaturedExistingId] = useState<number | null>(null);
+  const [featuredImageIndex, setFeaturedImageIndex] = useState<number>(0);
 
   const {
     car,
@@ -327,13 +332,6 @@ export default function EditCarScreen() {
   useEffect(() => {
     if (!car || !makes.length) return;
 
-    const formattedImages: CarImage[] = (car.images || []).map((img: any) => ({
-      id: img.id,
-      image_url: typeof img === "string" ? img : img.image_url,
-      is_feature: img.is_featured ? "True" : "False",
-      caption: img.caption || "",
-    }));
-
     const formFields = { ...getInitialFormData(), ...car };
 
     // Backend returns make/model as strings only — resolve IDs from the loaded lists
@@ -343,8 +341,8 @@ export default function EditCarScreen() {
     setFormData({
       ...formFields,
       dealer: car.dealer || 0,
-      price: car.price.toString(),
-      uploaded_images: formattedImages,
+      price: String(parseInt(String(car.price))),
+      uploaded_images: [],
       existing_images: car.images || [],
       description: car.description || "",
       trim: car.trim || "",
@@ -365,6 +363,25 @@ export default function EditCarScreen() {
       fetchModels(makeRef);
     }
   }, [car, makes, fetchModels]);
+
+  // Initialize existing images once when car data first loads
+  useEffect(() => {
+    if (!car?.images || existingImagesInitialized.current) return;
+    existingImagesInitialized.current = true;
+    setExistingImages(
+      car.images.map((img: any) => ({
+        id: img.id,
+        image_url: typeof img === "string" ? img : img.image_url,
+        is_feature: img.is_featured ? "True" : "False",
+        caption: img.caption || "",
+      })),
+    );
+    const featured = car.images.find((img: any) => img.is_featured) as any;
+    if (featured) {
+      setFeaturedSource("existing");
+      setFeaturedExistingId(featured.id);
+    }
+  }, [car]);
 
   // Resolve model_ref by name once models are loaded for the current make
   useEffect(() => {
@@ -434,13 +451,38 @@ export default function EditCarScreen() {
   };
 
   const removeImage = (index: number) => {
-    const updatedImages = formData.uploaded_images.filter(
-      (_, i) => i !== index,
-    );
-    setFormData((prev) => ({
-      ...prev,
-      uploaded_images: updatedImages,
-    }));
+    const updatedImages = formData.uploaded_images.filter((_, i) => i !== index);
+    setFormData((prev) => ({ ...prev, uploaded_images: updatedImages }));
+    if (featuredSource === "new") {
+      if (index === featuredImageIndex) {
+        setFeaturedSource("existing");
+        setFeaturedExistingId(existingImages[0]?.id ?? null);
+        setFeaturedImageIndex(-1);
+      } else if (index < featuredImageIndex) {
+        setFeaturedImageIndex(featuredImageIndex - 1);
+      }
+    }
+  };
+
+  const removeExistingImage = (imageId: number) => {
+    setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
+    if (featuredExistingId === imageId) {
+      setFeaturedSource("new");
+      setFeaturedExistingId(null);
+      setFeaturedImageIndex(0);
+    }
+  };
+
+  const setFeaturedNewImage = (index: number) => {
+    setFeaturedSource("new");
+    setFeaturedExistingId(null);
+    setFeaturedImageIndex(index);
+  };
+
+  const setFeaturedExistingImage = (imageId: number) => {
+    setFeaturedSource("existing");
+    setFeaturedExistingId(imageId);
+    setFeaturedImageIndex(-1);
   };
 
   const handleMakeSelect = async (makeId: number) => {
@@ -533,17 +575,29 @@ export default function EditCarScreen() {
         carData.append(feature, (value ?? false).toString());
       });
 
+      // Existing images: send IDs so the backend preserves them
+      existingImages.forEach((image, index) => {
+        carData.append(`uploaded_images[${index}][id]`, String(image.id));
+        const isFeatured = featuredSource === "existing" && featuredExistingId === image.id;
+        carData.append(`uploaded_images[${index}][is_featured]`, isFeatured ? "true" : "false");
+      });
+
+      // Track which original images were removed so their slots can be reused
+      const removedImageIds = (car?.images ?? [])
+        .filter((img: any) => !existingImages.some((e) => e.id === img.id))
+        .map((img: any) => img.id);
+
+      // New uploads: append after existing
       formData.uploaded_images.forEach((image, index) => {
         if (image.file) {
-          carData.append(`uploaded_images[${index}][image]`, image.file);
-          carData.append(
-            `uploaded_images[${index}][is_featured]`,
-            image.is_feature === "True" ? "true" : "false",
-          );
-          carData.append(
-            `uploaded_images[${index}][caption]`,
-            image.caption || "Image",
-          );
+          const globalIndex = existingImages.length + index;
+          carData.append(`uploaded_images[${globalIndex}][image]`, image.file);
+          if (removedImageIds[index] !== undefined) {
+            carData.append(`uploaded_images[${globalIndex}][id]`, String(removedImageIds[index]));
+          }
+          const isFeatured = featuredSource === "new" && index === featuredImageIndex;
+          carData.append(`uploaded_images[${globalIndex}][is_featured]`, isFeatured ? "true" : "false");
+          carData.append(`uploaded_images[${globalIndex}][caption]`, image.caption || "Image");
         }
       });
 
@@ -555,6 +609,12 @@ export default function EditCarScreen() {
           (formData.description || "") + inspectionReport,
         );
       }
+
+      console.log("=== UPDATE CAR PAYLOAD ===");
+      for (const [key, value] of carData.entries()) {
+        console.log(`  ${key}:`, value);
+      }
+      console.log("==========================");
 
       await updateCar(id, carData);
       toast({
@@ -639,13 +699,44 @@ export default function EditCarScreen() {
               <Camera className="h-5 w-5 text-primary" /> Photos & Media
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {formData.uploaded_images.map((image, index) => (
+              {/* Existing images from server */}
+              {existingImages.map((image) => (
                 <div
-                  key={index}
+                  key={`existing-${image.id}`}
                   className="relative group aspect-[4/3] rounded-xl overflow-hidden border bg-gray-50"
                 >
                   <img
-                    src={image.image_url || image.image_file}
+                    src={image.image_url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeExistingImage(image.id)}
+                    className="absolute top-2 right-2 bg-white/90 hover:bg-red-500 hover:text-white text-gray-900 p-1.5 rounded-lg shadow-sm transition-all"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <div className="absolute bottom-2 left-2">
+                    <Checkbox
+                      checked={featuredSource === "existing" && featuredExistingId === image.id}
+                      onCheckedChange={() => setFeaturedExistingImage(image.id)}
+                      className="bg-white/90 border-white"
+                    />
+                  </div>
+                  {featuredSource === "existing" && featuredExistingId === image.id && (
+                    <Badge className="absolute top-2 left-2 bg-primary/90">Main</Badge>
+                  )}
+                </div>
+              ))}
+              {/* New uploads */}
+              {formData.uploaded_images.map((image, index) => (
+                <div
+                  key={`new-${index}`}
+                  className="relative group aspect-[4/3] rounded-xl overflow-hidden border bg-gray-50"
+                >
+                  <img
+                    src={image.image_file}
                     alt=""
                     className="w-full h-full object-cover"
                   />
@@ -656,10 +747,15 @@ export default function EditCarScreen() {
                   >
                     <X className="h-4 w-4" />
                   </button>
-                  {image.is_feature === "True" && (
-                    <Badge className="absolute bottom-2 left-2 bg-primary/90">
-                      Main
-                    </Badge>
+                  <div className="absolute bottom-2 left-2">
+                    <Checkbox
+                      checked={featuredSource === "new" && featuredImageIndex === index}
+                      onCheckedChange={() => setFeaturedNewImage(index)}
+                      className="bg-white/90 border-white"
+                    />
+                  </div>
+                  {featuredSource === "new" && featuredImageIndex === index && (
+                    <Badge className="absolute top-2 left-2 bg-primary/90">Main</Badge>
                   )}
                 </div>
               ))}

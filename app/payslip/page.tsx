@@ -1,12 +1,13 @@
 "use client";
 
-import { FileText, Download, RefreshCw } from "lucide-react";
+import { FileText, Download, RefreshCw, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePayslip } from "@/hooks/payslip";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useState } from "react";
+import { useEmployee } from "@/hooks/useEmployee";
 
 interface PayslipLineItem {
   name: string;
@@ -33,15 +34,31 @@ function PayslipCard({
   index: number;
   onDownload: (payslip: PayslipItem, index: number) => void;
 }) {
+  const { data: staffInfo } = useEmployee(payslip.employee);
+
   const formatCurrency = (amount: string) => {
     const num = parseFloat(amount);
     return isNaN(num) ? amount : `ETB ${num.toLocaleString()}`;
   };
 
+  const employeeName = staffInfo?.full_name || staffInfo?.user_email_display || `Employee #${payslip.employee}`;
+  const employeeRole = staffInfo?.position ?? null;
+
   return (
     <Card className="shadow-none bg-transparent">
       <CardHeader>
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+              <User className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm">{employeeName}</p>
+              {employeeRole && (
+                <p className="text-xs text-muted-foreground capitalize">{employeeRole}</p>
+              )}
+            </div>
+          </div>
           <Button
             variant="outline"
             size="sm"

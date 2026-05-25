@@ -99,7 +99,7 @@ export default function SignUpPage() {
   };
 
   return (
-    <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <Card className="w-full max-w-lg">
       <CardHeader>
         <Link
           href="/"
