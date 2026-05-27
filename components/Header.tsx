@@ -1,14 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Input } from "./ui/input";
-import { Search } from "lucide-react";
+import { Search, Bell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUserStore } from "@/store/user";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useProfileDetail } from "@/hooks/useProfileDetail";
+import { api } from "@/lib/api";
+import { Notification } from "@/types/notification";
 
 export default function Header() {
   const pathName = usePathname();
@@ -16,6 +18,14 @@ export default function Header() {
   const { user } = useUserStore();
   const { role: userRole } = useUserRole();
   const { profile } = useProfileDetail();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (isAuthPage) return;
+    api<Notification[]>("/notifications/", { method: "GET" })
+      .then((data) => setUnreadCount(data.filter((n) => !n.is_read).length))
+      .catch(() => {});
+  }, [isAuthPage]);
 
   if (isAuthPage) return null;
   return (
@@ -24,7 +34,19 @@ export default function Header() {
       style={{ backdropFilter: "blur(20px)" }}
     >
       <div className="flex items-center space-x-4"></div>
-      <div className="flex gap-10 items-center">
+      <div className="flex gap-6 items-center">
+        {/* Notification Bell */}
+        <Link
+          href="/notifications"
+          className="relative text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Bell className="size-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[10px] font-bold leading-none rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </Link>
         {/* Profile Avatar with Name */}
         <Link href="/settings" className="cursor-pointer flex items-center gap-3 hover:opacity-80 transition-opacity">
           <Avatar className="size-10 border-2 border-primary/20 hover:border-primary/40 transition-colors">

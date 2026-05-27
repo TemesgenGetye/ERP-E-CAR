@@ -1,25 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus,
   DollarSign,
   Users,
   TrendingUp,
-  TrendingDown,
-  Calendar,
-  Filter,
-  MoreHorizontal,
   Edit,
   Trash2,
   Phone,
-  Mail,
-  Car,
-  User,
-  Target,
   CheckCircle,
   XCircle,
-  Clock,
   AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,34 +34,56 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useSales } from "@/hooks/useSales";
+import { useToast } from "@/hooks/use-toast";
 import { useCarData } from "@/hooks/useCarData";
-import { Sale, Lead } from "@/types";
+import { fetchAllProfiles, fetchAllCars } from "@/lib/car";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
+import { api } from "@/lib/api";
+import { Sale, Lead, Car } from "@/types";
+import { UserProfile } from "@/types/Profile";
+
+type LeadStatus =
+  | "inquiry"
+  | "contacted"
+  | "negotiation"
+  | "closed"
+  | "lost"
+  | "cancelled";
 
 export default function SalesPage() {
   const {
     sales,
     leads,
     isLoading,
-    error,
     createSale,
     updateSale,
     deleteSale,
     createLead,
     updateLead,
     deleteLead,
+    fetchLeads,
   } = useSales();
 
-  const { cars } = useCarData();
+  const { toast } = useToast();
+  const { cars: userCars } = useCarData();
+  const [buyers, setBuyers] = useState<UserProfile[]>([]);
+  const [allCars, setAllCars] = useState<Car[]>([]);
+
+  useEffect(() => {
+    fetchAllProfiles()
+      .then((profiles) => setBuyers(profiles.filter((p) => p.role === "buyer")))
+      .catch(() => {});
+    fetchAllCars()
+      .then(setAllCars)
+      .catch(() => {});
+  }, []);
+
+  const cars = allCars.length > 0 ? allCars : userCars;
 
   const [showSaleDialog, setShowSaleDialog] = useState(false);
+  const [isSaleSubmitting, setIsSaleSubmitting] = useState(false);
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -81,12 +94,10 @@ export default function SalesPage() {
   const [saleForm, setSaleForm] = useState<{
     buyer: string;
     car: string;
-    broker: string;
     price: string;
   }>({
     buyer: "",
     car: "",
-    broker: "",
     price: "",
   });
 
@@ -94,13 +105,7 @@ export default function SalesPage() {
   const [leadForm, setLeadForm] = useState<{
     name: string;
     contact: string;
-    status:
-      | "inquiry"
-      | "qualified"
-      | "proposal"
-      | "negotiation"
-      | "closed_won"
-      | "closed_lost";
+    status: LeadStatus;
     assigned_sales: string;
     car: string;
   }>({
@@ -111,29 +116,53 @@ export default function SalesPage() {
     car: "",
   });
 
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [statusLead, setStatusLead] = useState<Lead | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<LeadStatus>("inquiry");
+  const [isStatusSubmitting, setIsStatusSubmitting] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "sale" | "lead";
+    id: number;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleSaleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const isEditing = !!editingSale;
+    setIsSaleSubmitting(true);
     try {
-      if (editingSale) {
-        await updateSale(editingSale.id, {
+      if (isEditing) {
+        await updateSale(editingSale!.id, {
           buyer: parseInt(saleForm.buyer),
           car: parseInt(saleForm.car),
-          broker: saleForm.broker ? parseInt(saleForm.broker) : null,
           price: saleForm.price,
         });
       } else {
         await createSale({
           buyer: parseInt(saleForm.buyer),
           car: parseInt(saleForm.car),
-          broker: saleForm.broker ? parseInt(saleForm.broker) : null,
           price: saleForm.price,
         });
       }
+      toast({
+        title: isEditing ? "Sale Updated" : "Sale Created",
+        variant: "success",
+        description: isEditing
+          ? "The sale has been updated successfully."
+          : "New sale has been recorded successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to save sale",
+        variant: "destructive",
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsSaleSubmitting(false);
       setShowSaleDialog(false);
       setEditingSale(null);
-      setSaleForm({ buyer: "", car: "", broker: "", price: "" });
-    } catch (error) {
-      console.error("Error saving sale:", error);
+      setSaleForm({ buyer: "", car: "", price: "" });
     }
   };
 
@@ -180,7 +209,6 @@ export default function SalesPage() {
     setSaleForm({
       buyer: sale.buyer.toString(),
       car: sale.car.toString(),
-      broker: sale.broker?.toString() || "",
       price: sale.price,
     });
     setShowSaleDialog(true);
@@ -198,53 +226,105 @@ export default function SalesPage() {
     setShowLeadDialog(true);
   };
 
-  const handleDeleteSale = async (id: number) => {
-    if (confirm("Are you sure you want to delete this sale?")) {
-      try {
-        await deleteSale(id);
-      } catch (error) {
-        console.error("Error deleting sale:", error);
+  const handleDeleteSale = (id: number) =>
+    setDeleteTarget({ type: "sale", id });
+  const handleDeleteLead = (id: number) =>
+    setDeleteTarget({ type: "lead", id });
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      if (deleteTarget.type === "sale") {
+        await deleteSale(deleteTarget.id);
+      } else {
+        await deleteLead(deleteTarget.id);
       }
+      toast({
+        title: "Deleted",
+        variant: "success",
+        description: `${deleteTarget.type === "sale" ? "Sale" : "Lead"} deleted successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        variant: "destructive",
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
-  const handleDeleteLead = async (id: number) => {
-    if (confirm("Are you sure you want to delete this lead?")) {
-      try {
-        await deleteLead(id);
-      } catch (error) {
-        console.error("Error deleting lead:", error);
-      }
+  const handleOpenStatusDialog = (lead: Lead) => {
+    setStatusLead(lead);
+    setSelectedStatus(lead.status);
+    setShowStatusDialog(true);
+  };
+
+  const handleUpdateLeadStatus = async () => {
+    if (!statusLead) return;
+    setIsStatusSubmitting(true);
+    try {
+      await api(`/sales/leads/${statusLead.id}/update_status/`, {
+        method: "PATCH",
+        body: { status: selectedStatus } as any,
+      });
+      await fetchLeads();
+      toast({
+        title: "Status Updated",
+        variant: "success",
+        description: `Lead status changed to ${selectedStatus}.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to update status",
+        variant: "destructive",
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsStatusSubmitting(false);
+      setShowStatusDialog(false);
+      setStatusLead(null);
     }
+  };
+
+  const getBuyerName = (id: number) => {
+    const profile = buyers.find((b) => b.id === id);
+    return profile ? `${profile.first_name} ${profile.last_name}` : `#${id}`;
+  };
+
+  const getCarLabel = (id: number) => {
+    const car = cars.find((c) => c.id === id);
+    return car ? `${car.year} ${car.make} ${car.model}` : `#${id}`;
   };
 
   const filteredLeads = leads.filter(
-    (lead) => filterStatus === "all" || lead.status === filterStatus
+    (lead) => filterStatus === "all" || lead.status === filterStatus,
   );
 
   const totalSales = sales.reduce(
     (sum, sale) => sum + parseFloat(sale.price),
-    0
+    0,
   );
   const totalLeads = leads.length;
-  const closedLeads = leads.filter(
-    (lead) => lead.status === "closed_won"
-  ).length;
+  const closedLeads = leads.filter((lead) => lead.status === "closed").length;
 
   const getLeadStatusColor = (status: string) => {
     switch (status) {
       case "inquiry":
         return "bg-blue-100 text-blue-800";
-      case "qualified":
-        return "bg-green-100 text-green-800";
-      case "proposal":
-        return "bg-yellow-100 text-yellow-800";
+      case "contacted":
+        return "bg-purple-100 text-purple-800";
       case "negotiation":
         return "bg-orange-100 text-orange-800";
-      case "closed_won":
+      case "closed":
         return "bg-green-100 text-green-800";
-      case "closed_lost":
+      case "lost":
         return "bg-red-100 text-red-800";
+      case "cancelled":
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -254,33 +334,25 @@ export default function SalesPage() {
     switch (status) {
       case "inquiry":
         return <AlertCircle className="h-4 w-4" />;
-      case "qualified":
-        return <Target className="h-4 w-4" />;
-      case "proposal":
-        return <Clock className="h-4 w-4" />;
+      case "contacted":
+        return <Phone className="h-4 w-4" />;
       case "negotiation":
         return <TrendingUp className="h-4 w-4" />;
-      case "closed_won":
+      case "closed":
         return <CheckCircle className="h-4 w-4" />;
-      case "closed_lost":
+      case "lost":
+        return <XCircle className="h-4 w-4" />;
+      case "cancelled":
         return <XCircle className="h-4 w-4" />;
       default:
         return <AlertCircle className="h-4 w-4" />;
     }
   };
 
-  if (isLoading) {
+  if (isLoading && sales.length === 0 && leads.length === 0) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p className="text-muted-foreground">Loading sales data...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-red-500">Error: {error}</p>
       </div>
     );
   }
@@ -300,7 +372,7 @@ export default function SalesPage() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="shadow-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -315,7 +387,7 @@ export default function SalesPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
@@ -328,7 +400,7 @@ export default function SalesPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Closed Deals
@@ -343,7 +415,7 @@ export default function SalesPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-none">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Conversion Rate
@@ -369,7 +441,7 @@ export default function SalesPage() {
           <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
             <button
               onClick={() => setActiveTab("sales")}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === "sales"
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
@@ -379,7 +451,7 @@ export default function SalesPage() {
             </button>
             <button
               onClick={() => setActiveTab("leads")}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === "leads"
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
@@ -392,7 +464,7 @@ export default function SalesPage() {
 
         {/* Sales Tab */}
         {activeTab === "sales" && (
-          <Card>
+          <Card className="shadow-none">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Sales Records</CardTitle>
@@ -402,7 +474,7 @@ export default function SalesPage() {
               </div>
               <Dialog open={showSaleDialog} onOpenChange={setShowSaleDialog}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button className="cursor-pointer">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Sale
                   </Button>
@@ -421,17 +493,28 @@ export default function SalesPage() {
                   <form onSubmit={handleSaleSubmit}>
                     <div className="grid gap-4 py-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="buyer">Buyer ID</Label>
-                        <Input
-                          id="buyer"
-                          type="number"
+                        <Label htmlFor="buyer">Buyer</Label>
+                        <Select
                           value={saleForm.buyer}
-                          onChange={(e) =>
-                            setSaleForm({ ...saleForm, buyer: e.target.value })
+                          onValueChange={(value) =>
+                            setSaleForm({ ...saleForm, buyer: value })
                           }
-                          placeholder="Enter buyer ID"
                           required
-                        />
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select buyer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {buyers.map((buyer) => (
+                              <SelectItem
+                                key={buyer.id}
+                                value={buyer.id.toString()}
+                              >
+                                {buyer.first_name} {buyer.last_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="grid gap-2">
                         <Label htmlFor="car">Car ID</Label>
@@ -456,24 +539,12 @@ export default function SalesPage() {
                                   {parseFloat(
                                     typeof car.price === "string"
                                       ? car.price
-                                      : String(car.price || "0")
+                                      : String(car.price || "0"),
                                   ).toLocaleString()}
                                 </SelectItem>
                               ))}
                           </SelectContent>
                         </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="broker">Broker ID (Optional)</Label>
-                        <Input
-                          id="broker"
-                          type="number"
-                          value={saleForm.broker}
-                          onChange={(e) =>
-                            setSaleForm({ ...saleForm, broker: e.target.value })
-                          }
-                          placeholder="Enter broker ID"
-                        />
                       </div>
                       <div className="grid gap-2">
                         <Label htmlFor="price">Sale Price</Label>
@@ -497,18 +568,15 @@ export default function SalesPage() {
                         onClick={() => {
                           setShowSaleDialog(false);
                           setEditingSale(null);
-                          setSaleForm({
-                            buyer: "",
-                            car: "",
-                            broker: "",
-                            price: "",
-                          });
+                          setSaleForm({ buyer: "", car: "", price: "" });
                         }}
                       >
                         Cancel
                       </Button>
-                      <Button type="submit">
-                        {editingSale ? "Update" : "Add"} Sale
+                      <Button type="submit" disabled={isSaleSubmitting}>
+                        {isSaleSubmitting
+                          ? "Saving..."
+                          : `${editingSale ? "Update" : "Add"} Sale`}
                       </Button>
                     </DialogFooter>
                   </form>
@@ -529,42 +597,38 @@ export default function SalesPage() {
                             <span className="font-medium">Sale #{sale.id}</span>
                             <span className="text-green-600 font-bold">
                               {Math.abs(
-                                parseFloat(sale.price)
+                                parseFloat(sale.price),
                               ).toLocaleString()}{" "}
                               ETB
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Buyer: {sale.buyer} | Car: {sale.car}
-                            {sale.broker && ` | Broker: ${sale.broker}`}
+                            Buyer: {getBuyerName(sale.buyer)} | Car:{" "}
+                            {getCarLabel(sale.car)}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {new Date(sale.date).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleEditSale(sale)}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteSale(sale.id)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="cursor-pointer"
+                          onClick={() => handleEditSale(sale)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="cursor-pointer text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteSale(sale.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -579,7 +643,7 @@ export default function SalesPage() {
 
         {/* Leads Tab */}
         {activeTab === "leads" && (
-          <Card>
+          <Card className="shadow-none">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Sales Leads</CardTitle>
@@ -589,26 +653,35 @@ export default function SalesPage() {
               </div>
               <div className="flex gap-2">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32 cursor-pointer">
                     <SelectValue placeholder="Filter" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="inquiry">Inquiry</SelectItem>
-                    <SelectItem value="qualified">Qualified</SelectItem>
-                    <SelectItem value="proposal">Proposal</SelectItem>
-                    <SelectItem value="negotiation">Negotiation</SelectItem>
-                    <SelectItem value="closed_won">Closed Won</SelectItem>
-                    <SelectItem value="closed_lost">Closed Lost</SelectItem>
+                    <SelectItem className="cursor-pointer" value="all">
+                      All Status
+                    </SelectItem>
+                    <SelectItem className="cursor-pointer" value="inquiry">
+                      Inquiry
+                    </SelectItem>
+                    <SelectItem className="cursor-pointer" value="contacted">
+                      Contacted
+                    </SelectItem>
+                    <SelectItem className="cursor-pointer" value="negotiation">
+                      Negotiation
+                    </SelectItem>
+                    <SelectItem className="cursor-pointer" value="closed">
+                      Closed
+                    </SelectItem>
+                    <SelectItem className="cursor-pointer" value="lost">
+                      Lost
+                    </SelectItem>
+                    <SelectItem className="cursor-pointer" value="cancelled">
+                      Cancelled
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <Dialog open={showLeadDialog} onOpenChange={setShowLeadDialog}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Lead
-                    </Button>
-                  </DialogTrigger>
+                  <DialogTrigger asChild></DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>
@@ -662,18 +735,16 @@ export default function SalesPage() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="inquiry">Inquiry</SelectItem>
-                              <SelectItem value="qualified">
-                                Qualified
+                              <SelectItem value="contacted">
+                                Contacted
                               </SelectItem>
-                              <SelectItem value="proposal">Proposal</SelectItem>
                               <SelectItem value="negotiation">
                                 Negotiation
                               </SelectItem>
-                              <SelectItem value="closed_won">
-                                Closed Won
-                              </SelectItem>
-                              <SelectItem value="closed_lost">
-                                Closed Lost
+                              <SelectItem value="closed">Closed</SelectItem>
+                              <SelectItem value="lost">Lost</SelectItem>
+                              <SelectItem value="cancelled">
+                                Cancelled
                               </SelectItem>
                             </SelectContent>
                           </Select>
@@ -779,28 +850,32 @@ export default function SalesPage() {
                           </p>
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleEditLead(lead)}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteLead(lead.id)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="cursor-pointer"
+                          onClick={() => handleEditLead(lead)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="cursor-pointer"
+                          onClick={() => handleOpenStatusDialog(lead)}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="cursor-pointer text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteLead(lead.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -813,6 +888,69 @@ export default function SalesPage() {
           </Card>
         )}
       </div>
+
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={`Delete ${deleteTarget?.type === "sale" ? "Sale" : "Lead"}`}
+        description={`This will permanently delete the ${deleteTarget?.type}. This action cannot be undone.`}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
+
+      {/* Update Lead Status Dialog */}
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Lead Status</DialogTitle>
+            <DialogDescription>
+              Change the status for{" "}
+              <span className="font-medium">{statusLead?.name}</span>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Status</Label>
+              <Select
+                value={selectedStatus}
+                onValueChange={(v) => setSelectedStatus(v as LeadStatus)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inquiry">Inquiry</SelectItem>
+                  <SelectItem value="contacted">Contacted</SelectItem>
+                  <SelectItem value="negotiation">Negotiation</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                  <SelectItem value="lost">Lost</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowStatusDialog(false);
+                setStatusLead(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateLeadStatus}
+              disabled={isStatusSubmitting}
+            >
+              {isStatusSubmitting ? "Saving..." : "Update Status"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -125,11 +125,11 @@ export interface Lead {
   contact: string;
   status:
     | "inquiry"
-    | "qualified"
-    | "proposal"
+    | "contacted"
     | "negotiation"
-    | "closed_won"
-    | "closed_lost";
+    | "closed"
+    | "lost"
+    | "cancelled";
   assigned_sales: number | null;
   car: number;
   created_at: string;

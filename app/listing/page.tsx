@@ -50,7 +50,7 @@ export default function page() {
   const [searchQuery, setSearchQuery] = useState("");
   const { cars, isLoading, error, fetchCars } = useCarData();
   const router = useRouter();
-  const {role: userRole} = useUserRole();
+  const { role: userRole } = useUserRole();
 
   const getDisplayPrice = (car: any) => {
     if (car.sale_type === "auction" && car.bids && car.bids.length > 0) {
@@ -88,7 +88,7 @@ export default function page() {
               {userRole !== "dealer" && (
                 <Link
                   href={"/listing/new"}
-                  className="group bg-zinc-800 hover:bg-zinc-900 text-white py-2 text-sm w-fit cursor-pointer flex gap-2 items-center px-3 rounded-full"
+                  className="group bg-primary hover:bg-primary/90 text-primary-foreground py-2 text-sm w-fit cursor-pointer flex gap-2 items-center px-3 rounded-full"
                 >
                   <span>Add New</span>
                   <span className="group-hover:translate-x-1 transition-all">
@@ -123,7 +123,7 @@ export default function page() {
             {cars?.map((car) => (
               <Card
                 key={car?.id}
-                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer relative"
+                className="bg-none shadow-none overflow-hidden hover:shadow-sm transition-shadow cursor-pointer relative"
                 onClick={() => router.push(`/listing/${car.id}`)}
               >
                 <DropdownMenu>
@@ -179,13 +179,11 @@ export default function page() {
 
                 <div className="relative">
                   {/* Status Badges */}
-                  <div className="flex justify-center bg-gray-50 py-6">
-                    <img
-                      src={car.featured_image}
-                      alt={`${car.year} ${car.make} ${car.model}`}
-                      className="w-full h-48 object-cover"
-                    />
-                  </div>
+                  <img
+                    src={car.featured_image}
+                    alt={`${car.year} ${car.make} ${car.model}`}
+                    className="w-full h-48 object-contain"
+                  />
                 </div>
 
                 <CardContent className="p-4">

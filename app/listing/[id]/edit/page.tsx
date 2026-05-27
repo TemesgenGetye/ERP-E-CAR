@@ -304,6 +304,7 @@ export default function EditCarScreen() {
   const [featuredSource, setFeaturedSource] = useState<"existing" | "new">("new");
   const [featuredExistingId, setFeaturedExistingId] = useState<number | null>(null);
   const [featuredImageIndex, setFeaturedImageIndex] = useState<number>(0);
+  const [deletedImageIds, setDeletedImageIds] = useState<number[]>([]);
 
   const {
     car,
@@ -466,6 +467,7 @@ export default function EditCarScreen() {
 
   const removeExistingImage = (imageId: number) => {
     setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
+    setDeletedImageIds((prev) => [...prev, imageId]);
     if (featuredExistingId === imageId) {
       setFeaturedSource("new");
       setFeaturedExistingId(null);
@@ -528,10 +530,7 @@ export default function EditCarScreen() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("dealer", dealer);
-
     if (!dealer?.id) {
-      console.log("entered");
       toast({
         title: "Error",
         description: "Dealer info missing.",
@@ -575,29 +574,26 @@ export default function EditCarScreen() {
         carData.append(feature, (value ?? false).toString());
       });
 
-      // Existing images: send IDs so the backend preserves them
-      existingImages.forEach((image, index) => {
-        carData.append(`uploaded_images[${index}][id]`, String(image.id));
-        const isFeatured = featuredSource === "existing" && featuredExistingId === image.id;
-        carData.append(`uploaded_images[${index}][is_featured]`, isFeatured ? "true" : "false");
+      // Deleted images
+      deletedImageIds.forEach((id, index) => {
+        carData.append(`delete_images[${index}]`, String(id));
       });
 
-      // Track which original images were removed so their slots can be reused
-      const removedImageIds = (car?.images ?? [])
-        .filter((img: any) => !existingImages.some((e) => e.id === img.id))
-        .map((img: any) => img.id);
+      // Existing images: send IDs so the backend preserves them
+      existingImages.forEach((image, index) => {
+        carData.append(`uploaded_images[${index}].id`, String(image.id));
+        const isFeatured = featuredSource === "existing" && featuredExistingId === image.id;
+        carData.append(`uploaded_images[${index}].is_featured`, isFeatured ? "True" : "False");
+      });
 
       // New uploads: append after existing
       formData.uploaded_images.forEach((image, index) => {
         if (image.file) {
           const globalIndex = existingImages.length + index;
-          carData.append(`uploaded_images[${globalIndex}][image]`, image.file);
-          if (removedImageIds[index] !== undefined) {
-            carData.append(`uploaded_images[${globalIndex}][id]`, String(removedImageIds[index]));
-          }
+          carData.append(`uploaded_images[${globalIndex}].image_file`, image.file);
           const isFeatured = featuredSource === "new" && index === featuredImageIndex;
-          carData.append(`uploaded_images[${globalIndex}][is_featured]`, isFeatured ? "true" : "false");
-          carData.append(`uploaded_images[${globalIndex}][caption]`, image.caption || "Image");
+          carData.append(`uploaded_images[${globalIndex}].is_featured`, isFeatured ? "True" : "False");
+          carData.append(`uploaded_images[${globalIndex}].caption`, image.caption || "Image");
         }
       });
 
@@ -609,12 +605,6 @@ export default function EditCarScreen() {
           (formData.description || "") + inspectionReport,
         );
       }
-
-      console.log("=== UPDATE CAR PAYLOAD ===");
-      for (const [key, value] of carData.entries()) {
-        console.log(`  ${key}:`, value);
-      }
-      console.log("==========================");
 
       await updateCar(id, carData);
       toast({

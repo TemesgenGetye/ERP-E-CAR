@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, X, Plus, Check, Camera } from "lucide-react";
+import { ArrowLeft, X, Plus, Check, Camera, Star } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
@@ -392,7 +392,9 @@ export default function PostCarScreen() {
       const newImages: CarImage[] = imageFiles.map((file, index) => ({
         image_file: URL.createObjectURL(file),
         is_feature:
-          formData.uploaded_images.length === 0 && index === 0 ? "True" : "False",
+          formData.uploaded_images.length === 0 && index === 0
+            ? "True"
+            : "False",
         caption: "Pasted image",
         file,
       }));
@@ -429,7 +431,7 @@ export default function PostCarScreen() {
 
   const removeImage = (index: number) => {
     const updatedImages = formData.uploaded_images.filter(
-      (_, i) => i !== index
+      (_, i) => i !== index,
     );
 
     if (
@@ -442,6 +444,16 @@ export default function PostCarScreen() {
     setFormData((prev) => ({
       ...prev,
       uploaded_images: updatedImages,
+    }));
+  };
+
+  const setFeaturedImage = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      uploaded_images: prev.uploaded_images.map((img, i) => ({
+        ...img,
+        is_feature: i === index ? "True" : "False",
+      })),
     }));
   };
 
@@ -601,23 +613,21 @@ export default function PostCarScreen() {
         const value = formData[feature as keyof CarFormData];
         carData.append(
           feature,
-          value !== null && value !== undefined ? value.toString() : "false"
+          value !== null && value !== undefined ? value.toString() : "false",
         );
       });
 
       formData.uploaded_images.forEach((image, index) => {
         if (image.file instanceof File) {
-          carData.append(`uploaded_images[${index}][image]`, image.file);
+          carData.append(`uploaded_images[${index}].image_file`, image.file);
           carData.append(
-            `uploaded_images[${index}][is_featured]`,
-            image.is_feature === "True" ? "true" : "false"
+            `uploaded_images[${index}].is_featured`,
+            image.is_feature === "True" ? "True" : "False",
           );
           carData.append(
-            `uploaded_images[${index}][caption]`,
-            image.caption || "Image"
+            `uploaded_images[${index}].caption`,
+            image.caption || "Image",
           );
-        } else {
-          console.error(`Image at index ${index} has no file:`, image);
         }
       });
 
@@ -626,10 +636,11 @@ export default function PostCarScreen() {
       toast({
         title: "Success",
         description: "Your car has been posted successfully!",
+        variant: "success",
       });
-      
+
       // Navigate to inspection detail page with the car ID
-      if (res && 'id' in res && res.id) {
+      if (res && "id" in res && res.id) {
         router.push(`/listing/${res.id}/inspection`);
       } else {
         router.push("/listing");
@@ -678,7 +689,7 @@ export default function PostCarScreen() {
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="rounded-full"
+            className="rounded-full cursor-pointer"
           >
             {isSubmitting ? "Posting..." : "Post Car for Sale"}
           </Button>
@@ -687,7 +698,7 @@ export default function PostCarScreen() {
 
       <form onSubmit={handleSubmit} className="p-6 space-y-6 max-w-7xl mx-auto">
         {/* Basic Information */}
-        <section className="bg-white rounded-xl p-6 shadow-sm border">
+        <section className="bg-white rounded-xl p-6 border">
           <div className="flex items-center mb-6">
             <div className="w-6 h-6 bg-primary rounded border-2 border-primary mr-3 flex items-center justify-center">
               <Check className="h-4 w-4 text-white" />
@@ -762,9 +773,18 @@ export default function PostCarScreen() {
                 Price <span className="text-red-500">*</span>
               </Label>
               <Input
-                placeholder="65000"
-                value={formData.price}
-                onChange={(e) => handleFieldChange("price", e.target.value)}
+                placeholder="65,000"
+                value={
+                  formData.price
+                    ? Number(formData.price.replace(/,/g, "")).toLocaleString()
+                    : ""
+                }
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/,/g, "");
+                  if (raw === "" || /^\d+$/.test(raw)) {
+                    handleFieldChange("price", raw);
+                  }
+                }}
               />
             </div>
 
@@ -850,7 +870,7 @@ export default function PostCarScreen() {
                 onValueChange={(val) =>
                   handleFieldChange(
                     "body_type",
-                    val as CarFormData["body_type"]
+                    val as CarFormData["body_type"],
                   )
                 }
                 value={formData.body_type}
@@ -877,7 +897,7 @@ export default function PostCarScreen() {
                 onValueChange={(val) =>
                   handleFieldChange(
                     "drivetrain",
-                    val as CarFormData["drivetrain"]
+                    val as CarFormData["drivetrain"],
                   )
                 }
                 value={formData.drivetrain}
@@ -914,7 +934,7 @@ export default function PostCarScreen() {
                 onValueChange={(val) =>
                   handleFieldChange(
                     "fuel_type",
-                    val as CarFormData["fuel_type"]
+                    val as CarFormData["fuel_type"],
                   )
                 }
                 value={formData.fuel_type}
@@ -941,7 +961,7 @@ export default function PostCarScreen() {
                 onValueChange={(val) =>
                   handleFieldChange(
                     "sale_type",
-                    val as CarFormData["sale_type"]
+                    val as CarFormData["sale_type"],
                   )
                 }
                 value={formData.sale_type}
@@ -978,7 +998,7 @@ export default function PostCarScreen() {
         </section>
 
         {/* Images */}
-        <section className="bg-white rounded-xl p-6 shadow-sm border">
+        <section className="bg-white rounded-xl p-6 border">
           <div className="flex items-center mb-6">
             <div className="w-6 h-6 bg-primary rounded border-2 border-primary mr-3 flex items-center justify-center">
               <Check className="h-4 w-4 text-white" />
@@ -998,15 +1018,22 @@ export default function PostCarScreen() {
                 <button
                   type="button"
                   onClick={() => removeImage(index)}
-                  className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 shadow-lg"
+                  className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 shadow-lg cursor-pointer"
                 >
                   <X className="h-4 w-4 text-white" />
                 </button>
-                {image.is_feature === "True" && (
-                  <div className="absolute -top-1 -left-1 bg-blue-500 rounded-full p-1">
-                    <Check className="h-3 w-3 text-white" />
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setFeaturedImage(index)}
+                  title={image.is_feature === "True" ? "Featured image" : "Set as featured"}
+                  className={`absolute -top-2 -left-2 rounded-full p-1 shadow-lg transition-colors cursor-pointer ${
+                    image.is_feature === "True"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-white text-gray-400 hover:text-primary"
+                  }`}
+                >
+                  <Star className="h-3 w-3" />
+                </button>
               </div>
             ))}
 
@@ -1023,14 +1050,18 @@ export default function PostCarScreen() {
           </div>
           <p className="text-xs text-muted-foreground mt-3">
             Tip: You can paste images directly with{" "}
-            <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">Ctrl+V</kbd>{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">
+              Ctrl+V
+            </kbd>{" "}
             /{" "}
-            <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">⌘V</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">
+              ⌘V
+            </kbd>
           </p>
         </section>
 
         {/* Features */}
-        <section className="bg-white rounded-xl p-6 shadow-sm border">
+        <section className="bg-white rounded-xl p-6 border">
           <div className="flex items-center mb-6">
             <div className="w-6 h-6 bg-primary rounded border-2 border-primary mr-3 flex items-center justify-center">
               <Check className="h-4 w-4 text-white" />
@@ -1066,7 +1097,7 @@ export default function PostCarScreen() {
         </section>
 
         {/* Description */}
-        <section className="bg-white rounded-xl p-6 shadow-sm border">
+        <section className="bg-white rounded-xl p-6 border">
           <div className="flex items-center mb-6">
             <div className="w-6 h-6 bg-primary rounded border-2 border-primary mr-3 flex items-center justify-center">
               <Check className="h-4 w-4 text-white" />

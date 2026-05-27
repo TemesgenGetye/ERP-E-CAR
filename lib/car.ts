@@ -1,5 +1,16 @@
 import { getCredentials } from "./credential";
 import { API_URL } from "./config";
+import { api } from "./api";
+import { UserProfile } from "@/types/Profile";
+import { Car } from "@/types";
+
+export async function fetchAllProfiles(): Promise<UserProfile[]> {
+  return api<UserProfile[]>("/users/profiles/", { method: "GET" });
+}
+
+export async function fetchAllCars(): Promise<Car[]> {
+  return api<Car[]>("/inventory/user-cars/", { method: "GET" });
+}
 
 export type CarInspectionPayload = {
   car_id: number;
