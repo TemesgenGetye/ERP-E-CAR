@@ -32,6 +32,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { Car } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 
 // Image interface
 interface CarImage {
@@ -311,6 +312,8 @@ export default function EditCarScreen() {
   );
   const [featuredImageIndex, setFeaturedImageIndex] = useState<number>(0);
   const [deletedImageIds, setDeletedImageIds] = useState<number[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const {
     car,
@@ -520,19 +523,17 @@ export default function EditCarScreen() {
     }
   };
 
-  const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this listing?")) {
-      try {
-        await deleteCar(id);
-        toast({ title: "Deleted", description: "Car listing removed." });
-        router.push("/listing");
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete.",
-          variant: "destructive",
-        });
-      }
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteCar(id);
+      toast({ title: "Deleted", description: "Car listing removed." });
+      router.push("/listing");
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete.", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -671,6 +672,14 @@ export default function EditCarScreen() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete Listing"
+        description="Are you sure you want to delete this car listing? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-20 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -687,7 +696,7 @@ export default function EditCarScreen() {
               variant="outline"
               size="sm"
               className="text-red-500 hover:text-red-600 hover:bg-red-50"
-              onClick={handleDelete}
+              onClick={() => setShowDeleteDialog(true)}
             >
               <Trash2 className="h-4 w-4 mr-2" /> Delete
             </Button>

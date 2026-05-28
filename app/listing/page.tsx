@@ -1,21 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Search,
-  Grid3X3,
-  Calendar,
-  Car,
-  TrendingUp,
-  Users,
-  BarChart3,
-  Settings,
-  HelpCircle,
-  Bookmark,
-  MoreHorizontal,
-} from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -28,29 +15,25 @@ import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { useCarData } from "@/hooks/useCarData";
 import { useUserRole } from "@/hooks/useUserRole";
-
-const sidebarItems = [
-  { icon: Grid3X3, label: "Dashboard", active: true },
-  { icon: Car, label: "Listing", active: false },
-  { icon: Calendar, label: "Calendar", active: false },
-  { icon: TrendingUp, label: "Deals", active: false },
-  { icon: Users, label: "Tracking", active: false },
-  { icon: BarChart3, label: "Active Bids", active: false },
-  { icon: BarChart3, label: "Statistics", active: false },
-  { icon: TrendingUp, label: "Transaction", active: false },
-];
-
-const otherMenuItems = [
-  { icon: Search, label: "Search" },
-  { icon: Settings, label: "Settings" },
-  { icon: HelpCircle, label: "Help Center" },
-];
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 
 export default function page() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const { cars, isLoading, error, fetchCars } = useCarData();
+  const { cars, isLoading, error, fetchCars, deleteCar } = useCarData();
   const router = useRouter();
   const { role: userRole } = useUserRole();
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await deleteCar(deleteTarget);
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
 
   const getDisplayPrice = (car: any) => {
     if (car.sale_type === "auction" && car.bids && car.bids.length > 0) {
@@ -72,6 +55,14 @@ export default function page() {
 
   return (
     <div className="flex h-screen bg-background">
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Listing"
+        description="Are you sure you want to delete this car listing? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
@@ -163,13 +154,7 @@ export default function page() {
                       className="text-red-600"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (
-                          confirm(
-                            "Are you sure you want to delete this listing?",
-                          )
-                        ) {
-                          // TODO: Implement delete functionality
-                        }
+                        setDeleteTarget(car.id.toString());
                       }}
                     >
                       Delete
