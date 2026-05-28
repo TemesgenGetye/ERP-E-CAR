@@ -85,7 +85,7 @@ export default function CarDetailPage() {
       const highestBid = Math.max(
         ...carData.bids
           .map((b: any) => parseFloat(b.amount))
-          .filter((n: number) => !Number.isNaN(n))
+          .filter((n: number) => !Number.isNaN(n)),
       );
       return highestBid;
     }
@@ -155,9 +155,7 @@ export default function CarDetailPage() {
 
   // Format feature name for display (convert snake_case to Title Case)
   const formatFeatureName = (feature: string) => {
-    return feature
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (l) => l.toUpperCase());
+    return feature.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   return (
@@ -229,8 +227,8 @@ export default function CarDetailPage() {
                             car.status === "available"
                               ? "bg-blue-100 text-blue-800 hover:bg-blue-100"
                               : car.status === "sold"
-                              ? "bg-gray-100 text-gray-800 hover:bg-gray-100"
-                              : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                                ? "bg-gray-100 text-gray-800 hover:bg-gray-100"
+                                : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
                           }`}
                         >
                           {car.status.charAt(0).toUpperCase() +
@@ -277,7 +275,7 @@ export default function CarDetailPage() {
                   <img
                     src={getImageUrl(selectedImage)}
                     alt={`${car.year} ${car.make} ${car.model}`}
-                    className="w-full h-96 object-cover"
+                    className="w-full h-96 object-contain"
                   />
                 </div>
 
@@ -297,7 +295,7 @@ export default function CarDetailPage() {
                         <img
                           src={typeof img === "string" ? img : img.image_url}
                           alt={`View ${index + 1}`}
-                          className="w-full h-16 object-cover"
+                          className="w-full h-16 object-contain"
                         />
                       </div>
                     ))}
@@ -601,7 +599,7 @@ export default function CarDetailPage() {
                     <div className="col-span-3 flex items-center gap-3">
                       <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${getAvatarColor(
-                          user.initials || "XX"
+                          user.initials || "XX",
                         )}`}
                       >
                         {user.initials || "XX"}
