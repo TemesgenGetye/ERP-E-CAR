@@ -36,7 +36,7 @@ export default function NotificationsPage() {
     setMarkingId(id);
     try {
       await api("/notifications/mark_read/", {
-        method: "PATCH",
+        method: "POST",
         body: { id } as any,
       });
       setNotifications((prev) =>

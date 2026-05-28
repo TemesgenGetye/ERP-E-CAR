@@ -210,7 +210,7 @@ export const approvePayrollRun = async (id: number) => {
       headers: {
         Authorization: `Bearer ${access}`,
       },
-    }
+    },
   );
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -283,7 +283,7 @@ export const createPayrollRun = async (period: string) => {
 export const runPayroll = async (id: number) => {
   const credential = await getCredentials();
   const { access } = credential;
-  const response = await fetch(`${API_URL}/payroll/payroll-runs/${id}/run`, {
+  const response = await fetch(`${API_URL}/payroll/payroll-runs/${id}/run/`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${access}`,

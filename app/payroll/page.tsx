@@ -545,6 +545,39 @@ function HRPayrollContent() {
     }
   };
 
+  const handleSubmitPayroll = () => {
+    if (selectedEmployees.length === 0) {
+      toast({
+        title: "No employees selected",
+        description: "Select at least one employee before submitting payroll.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const unassigned = selectedEmployees.filter((id) => {
+      const m = staffSalaryMetrics.get(id);
+      return !m || m.grossEarnings === 0;
+    });
+
+    if (unassigned.length > 0) {
+      const names = unassigned.map((id) => {
+        const s = employees.find((e) => e.id === id);
+        return s ? dealerStaffFullName(s) : `Employee #${id}`;
+      });
+      const preview = names.slice(0, 3).join(", ");
+      const extra = names.length > 3 ? ` and ${names.length - 3} more` : "";
+      toast({
+        title: "Missing salary assignments",
+        description: `${preview}${extra} have no salary assigned. Assign salaries before submitting.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // TODO: submit payroll API call
+  };
+
   // Load staff, assignments, and overtime on mount
   useEffect(() => {
     let cancelled = false;
@@ -923,7 +956,8 @@ function HRPayrollContent() {
                   {true && (
                     <Button
                       size="lg"
-                      className="bg-purple-600 hover:bg-purple-700"
+                      className="bg-purple-600 hover:bg-purple-700 cursor-pointer"
+                      onClick={handleSubmitPayroll}
                     >
                       Submit payroll
                       <ArrowRight className="h-4 w-4 ml-2" />
