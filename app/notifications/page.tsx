@@ -143,7 +143,7 @@ export default function NotificationsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="ml-4 shrink-0 text-xs bg-accent text-accent-foreground"
+                        className="ml-4 shrink-0 text-xs bg-accent text-accent-foreground cursor-pointer"
                         disabled={markingId === notification.id}
                         onClick={() => handleMarkAsRead(notification.id)}
                       >
