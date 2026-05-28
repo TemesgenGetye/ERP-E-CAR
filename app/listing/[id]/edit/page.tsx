@@ -299,10 +299,16 @@ export default function EditCarScreen() {
   const router = useRouter();
   const [formData, setFormData] = useState<CarFormData>(getInitialFormData());
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [existingImages, setExistingImages] = useState<{ id: number; image_url: string; is_feature: string; caption: string }[]>([]);
+  const [existingImages, setExistingImages] = useState<
+    { id: number; image_url: string; is_feature: string; caption: string }[]
+  >([]);
   const existingImagesInitialized = useRef(false);
-  const [featuredSource, setFeaturedSource] = useState<"existing" | "new">("new");
-  const [featuredExistingId, setFeaturedExistingId] = useState<number | null>(null);
+  const [featuredSource, setFeaturedSource] = useState<"existing" | "new">(
+    "new",
+  );
+  const [featuredExistingId, setFeaturedExistingId] = useState<number | null>(
+    null,
+  );
   const [featuredImageIndex, setFeaturedImageIndex] = useState<number>(0);
   const [deletedImageIds, setDeletedImageIds] = useState<number[]>([]);
 
@@ -452,7 +458,9 @@ export default function EditCarScreen() {
   };
 
   const removeImage = (index: number) => {
-    const updatedImages = formData.uploaded_images.filter((_, i) => i !== index);
+    const updatedImages = formData.uploaded_images.filter(
+      (_, i) => i !== index,
+    );
     setFormData((prev) => ({ ...prev, uploaded_images: updatedImages }));
     if (featuredSource === "new") {
       if (index === featuredImageIndex) {
@@ -582,18 +590,32 @@ export default function EditCarScreen() {
       // Existing images: send IDs so the backend preserves them
       existingImages.forEach((image, index) => {
         carData.append(`uploaded_images[${index}].id`, String(image.id));
-        const isFeatured = featuredSource === "existing" && featuredExistingId === image.id;
-        carData.append(`uploaded_images[${index}].is_featured`, isFeatured ? "True" : "False");
+        const isFeatured =
+          featuredSource === "existing" && featuredExistingId === image.id;
+        carData.append(
+          `uploaded_images[${index}].is_featured`,
+          isFeatured ? "True" : "False",
+        );
       });
 
       // New uploads: append after existing
       formData.uploaded_images.forEach((image, index) => {
         if (image.file) {
           const globalIndex = existingImages.length + index;
-          carData.append(`uploaded_images[${globalIndex}].image_file`, image.file);
-          const isFeatured = featuredSource === "new" && index === featuredImageIndex;
-          carData.append(`uploaded_images[${globalIndex}].is_featured`, isFeatured ? "True" : "False");
-          carData.append(`uploaded_images[${globalIndex}].caption`, image.caption || "Image");
+          carData.append(
+            `uploaded_images[${globalIndex}].image_file`,
+            image.file,
+          );
+          const isFeatured =
+            featuredSource === "new" && index === featuredImageIndex;
+          carData.append(
+            `uploaded_images[${globalIndex}].is_featured`,
+            isFeatured ? "True" : "False",
+          );
+          carData.append(
+            `uploaded_images[${globalIndex}].caption`,
+            image.caption || "Image",
+          );
         }
       });
 
@@ -698,7 +720,7 @@ export default function EditCarScreen() {
                   <img
                     src={image.image_url}
                     alt=""
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                   <button
                     type="button"
@@ -709,14 +731,20 @@ export default function EditCarScreen() {
                   </button>
                   <div className="absolute bottom-2 left-2">
                     <Checkbox
-                      checked={featuredSource === "existing" && featuredExistingId === image.id}
+                      checked={
+                        featuredSource === "existing" &&
+                        featuredExistingId === image.id
+                      }
                       onCheckedChange={() => setFeaturedExistingImage(image.id)}
-                      className="bg-white/90 border-white"
+                      className="bg-white/90 border-2 border-gray-400"
                     />
                   </div>
-                  {featuredSource === "existing" && featuredExistingId === image.id && (
-                    <Badge className="absolute top-2 left-2 bg-primary/90">Main</Badge>
-                  )}
+                  {featuredSource === "existing" &&
+                    featuredExistingId === image.id && (
+                      <Badge className="absolute top-2 left-2 bg-primary/90">
+                        Main
+                      </Badge>
+                    )}
                 </div>
               ))}
               {/* New uploads */}
@@ -739,13 +767,17 @@ export default function EditCarScreen() {
                   </button>
                   <div className="absolute bottom-2 left-2">
                     <Checkbox
-                      checked={featuredSource === "new" && featuredImageIndex === index}
+                      checked={
+                        featuredSource === "new" && featuredImageIndex === index
+                      }
                       onCheckedChange={() => setFeaturedNewImage(index)}
-                      className="bg-white/90 border-white"
+                      className="bg-white/90 border-2 border-gray-400"
                     />
                   </div>
                   {featuredSource === "new" && featuredImageIndex === index && (
-                    <Badge className="absolute top-2 left-2 bg-primary/90">Main</Badge>
+                    <Badge className="absolute top-2 left-2 bg-primary/90">
+                      Main
+                    </Badge>
                   )}
                 </div>
               ))}
@@ -763,9 +795,13 @@ export default function EditCarScreen() {
             </div>
             <p className="text-xs text-muted-foreground mt-3">
               Tip: You can paste images directly with{" "}
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">Ctrl+V</kbd>{" "}
+              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">
+                Ctrl+V
+              </kbd>{" "}
               /{" "}
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">⌘V</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">
+                ⌘V
+              </kbd>
             </p>
           </section>
 
