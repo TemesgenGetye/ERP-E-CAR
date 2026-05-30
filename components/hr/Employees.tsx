@@ -30,7 +30,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { HREmployee, CreateHREmployeeRequest } from "@/types";
 import { useSalaryCpts } from "@/hooks/payroll";
-import { assignSalaryComponent, createOvertime } from "@/lib/payroll";
+import { assignSalaryComponent } from "@/lib/payroll";
+import { api } from "@/lib/api";
 import { useHRStore } from "@/store/hr";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
@@ -84,6 +85,7 @@ export function EmployeesComponent({
     approved: true,
     date: "",
   });
+  const [isOvertimeSubmitting, setIsOvertimeSubmitting] = useState(false);
 
   const { salaryCpts } = useSalaryCpts();
   const safeSalaryCpts = salaryCpts || [];
@@ -197,20 +199,27 @@ export function EmployeesComponent({
   const handleOvertimeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmployee || !overtimeForm.hours || !overtimeForm.date) return;
+    setIsOvertimeSubmitting(true);
     try {
-      await createOvertime(
-        selectedEmployee.id,
-        overtimeForm.overtime_type,
-        parseFloat(overtimeForm.hours),
-        overtimeForm.approved,
-        overtimeForm.date,
-      );
+      await api("/hr/overtime/", {
+        method: "POST",
+        body: JSON.stringify({
+          employee: selectedEmployee.id,
+          overtime_type: overtimeForm.overtime_type,
+          hours: overtimeForm.hours,
+          approved: overtimeForm.approved,
+          date: overtimeForm.date,
+        }),
+        headers: { "Content-Type": "application/json" },
+      } as any);
       setShowOvertimeDialog(false);
       setSelectedEmployee(null);
       setOvertimeForm({ overtime_type: "1.5", hours: "", approved: true, date: "" });
       toast({ title: "Success", description: "Overtime created successfully!", variant: "success" });
     } catch (error) {
       toast({ title: "Error", description: "Failed to create overtime.", variant: "destructive" });
+    } finally {
+      setIsOvertimeSubmitting(false);
     }
   };
 
@@ -505,7 +514,9 @@ export function EmployeesComponent({
               <Button type="button" variant="outline" onClick={() => setShowOvertimeDialog(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Create Overtime</Button>
+              <Button type="submit" disabled={isOvertimeSubmitting}>
+                {isOvertimeSubmitting ? "Creating..." : "Create Overtime"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
