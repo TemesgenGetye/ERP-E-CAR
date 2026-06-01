@@ -70,10 +70,14 @@ export function EmployeesComponent({
   const { toast } = useToast();
   const getEmployees = useHRStore((state) => state.getEmployees);
   const [showDialog, setShowDialog] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<HREmployee | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<HREmployee | null>(
+    null,
+  );
   const [showSalaryDialog, setShowSalaryDialog] = useState(false);
   const [showOvertimeDialog, setShowOvertimeDialog] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<HREmployee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<HREmployee | null>(
+    null,
+  );
 
   const [form, setForm] = useState<CreateHREmployeeRequest>(emptyForm());
 
@@ -152,7 +156,8 @@ export function EmployeesComponent({
 
   const handleSalarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedEmployee || !salaryForm.component || !salaryForm.amount) return;
+    if (!selectedEmployee || !salaryForm.component || !salaryForm.amount)
+      return;
 
     const alreadyAssigned = selectedEmployee.components.some(
       (c) => c.id === parseInt(salaryForm.component),
@@ -179,9 +184,17 @@ export function EmployeesComponent({
       setSelectedEmployee(null);
       setSalaryForm({ component: "", amount: "" });
       await getEmployees();
-      toast({ title: "Success", description: "Salary component assigned successfully!", variant: "success" });
+      toast({
+        title: "Success",
+        description: "Salary component assigned successfully!",
+        variant: "success",
+      });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to assign salary component.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to assign salary component.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -203,21 +216,34 @@ export function EmployeesComponent({
     try {
       await api("/hr/overtime/", {
         method: "POST",
-        body: JSON.stringify({
+        body: {
           employee: selectedEmployee.id,
           overtime_type: overtimeForm.overtime_type,
           hours: overtimeForm.hours,
           approved: overtimeForm.approved,
           date: overtimeForm.date,
-        }),
+        },
         headers: { "Content-Type": "application/json" },
       } as any);
       setShowOvertimeDialog(false);
       setSelectedEmployee(null);
-      setOvertimeForm({ overtime_type: "1.5", hours: "", approved: true, date: "" });
-      toast({ title: "Success", description: "Overtime created successfully!", variant: "success" });
+      setOvertimeForm({
+        overtime_type: "1.5",
+        hours: "",
+        approved: true,
+        date: "",
+      });
+      toast({
+        title: "Success",
+        description: "Overtime created successfully!",
+        variant: "success",
+      });
     } catch (error) {
-      toast({ title: "Error", description: "Failed to create overtime.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to create overtime.",
+        variant: "destructive",
+      });
     } finally {
       setIsOvertimeSubmitting(false);
     }
@@ -234,14 +260,21 @@ export function EmployeesComponent({
         </div>
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditingEmployee(null); setForm(emptyForm()); }}>
+            <Button
+              onClick={() => {
+                setEditingEmployee(null);
+                setForm(emptyForm());
+              }}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Employee
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingEmployee ? "Edit Employee" : "Add New Employee"}</DialogTitle>
+              <DialogTitle>
+                {editingEmployee ? "Edit Employee" : "Add New Employee"}
+              </DialogTitle>
               <DialogDescription>
                 {editingEmployee
                   ? "Update this employee's details. Email cannot be changed."
@@ -256,7 +289,9 @@ export function EmployeesComponent({
                     id="user_email"
                     type="email"
                     value={form.user_email}
-                    onChange={(e) => setForm({ ...form, user_email: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, user_email: e.target.value })
+                    }
                     required
                     disabled={!!editingEmployee}
                   />
@@ -266,7 +301,9 @@ export function EmployeesComponent({
                   <Input
                     id="position"
                     value={form.position}
-                    onChange={(e) => setForm({ ...form, position: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, position: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -276,7 +313,9 @@ export function EmployeesComponent({
                     id="hire_date"
                     type="date"
                     value={form.hire_date}
-                    onChange={(e) => setForm({ ...form, hire_date: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, hire_date: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -287,15 +326,23 @@ export function EmployeesComponent({
                     type="number"
                     step="0.01"
                     value={form.salary ?? ""}
-                    onChange={(e) => setForm({ ...form, salary: e.target.value || null })}
+                    onChange={(e) =>
+                      setForm({ ...form, salary: e.target.value || null })
+                    }
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowDialog(false)}
+                >
                   Cancel
                 </Button>
-                <Button type="submit">{editingEmployee ? "Update" : "Create"}</Button>
+                <Button type="submit">
+                  {editingEmployee ? "Update" : "Create"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -323,15 +370,21 @@ export function EmployeesComponent({
                 employees.map((employee) => (
                   <tr key={employee.id} className="border-b hover:bg-gray-50">
                     <td className="p-2 font-medium">{employee.full_name}</td>
-                    <td className="p-2 text-sm text-muted-foreground">{employee.user_email_display}</td>
+                    <td className="p-2 text-sm text-muted-foreground">
+                      {employee.user_email_display}
+                    </td>
                     <td className="p-2 text-sm">{employee.position}</td>
                     <td className="p-2 text-sm">
-                      {(employee.hire_date)
-                        ? new Date(employee.hire_date).toLocaleDateString()
-                        : <span className="text-muted-foreground">—</span>}
+                      {employee.hire_date ? (
+                        new Date(employee.hire_date).toLocaleDateString()
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="p-2">
-                      <Badge variant={employee.is_active ? "default" : "secondary"}>
+                      <Badge
+                        variant={employee.is_active ? "default" : "secondary"}
+                      >
                         {employee.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </td>
@@ -342,7 +395,9 @@ export function EmployeesComponent({
                             <div key={c.id} className="flex items-center gap-1">
                               <span>{c.component_name}</span>
                               <span className="text-muted-foreground">·</span>
-                              <span className="font-medium text-green-700">ETB {parseFloat(c.amount).toLocaleString()}</span>
+                              <span className="font-medium text-green-700">
+                                ETB {parseFloat(c.amount).toLocaleString()}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -351,13 +406,21 @@ export function EmployeesComponent({
                       )}
                     </td>
                     <td className="p-2">
-                      <Button variant="outline" size="sm" onClick={() => handleAssignSalary(employee)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAssignSalary(employee)}
+                      >
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Assign
                       </Button>
                     </td>
                     <td className="p-2">
-                      <Button variant="outline" size="sm" onClick={() => handleCreateOvertime(employee)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCreateOvertime(employee)}
+                      >
                         <Clock className="h-4 w-4 mr-1" />
                         Add
                       </Button>
@@ -370,7 +433,9 @@ export function EmployeesComponent({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(employee)}>
+                          <DropdownMenuItem
+                            onClick={() => handleEdit(employee)}
+                          >
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
@@ -388,7 +453,10 @@ export function EmployeesComponent({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-muted-foreground">
+                  <td
+                    colSpan={9}
+                    className="p-8 text-center text-muted-foreground"
+                  >
                     No employees found. Add your first employee to get started.
                   </td>
                 </tr>
@@ -413,14 +481,19 @@ export function EmployeesComponent({
                 <Label>Salary Component</Label>
                 <Select
                   value={salaryForm.component}
-                  onValueChange={(value) => setSalaryForm({ ...salaryForm, component: value })}
+                  onValueChange={(value) =>
+                    setSalaryForm({ ...salaryForm, component: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a salary component" />
                   </SelectTrigger>
                   <SelectContent className="z-[50001]">
                     {safeSalaryCpts?.map((component: any) => (
-                      <SelectItem key={component.id} value={String(component.id)}>
+                      <SelectItem
+                        key={component.id}
+                        value={String(component.id)}
+                      >
                         {component.name} ({component.component_type})
                       </SelectItem>
                     ))}
@@ -435,14 +508,20 @@ export function EmployeesComponent({
                   step="0.01"
                   placeholder="Enter amount"
                   value={salaryForm.amount}
-                  onChange={(e) => setSalaryForm({ ...salaryForm, amount: e.target.value })}
+                  onChange={(e) =>
+                    setSalaryForm({ ...salaryForm, amount: e.target.value })
+                  }
                   required
                   className="w-fit"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowSalaryDialog(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowSalaryDialog(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit">Assign Component</Button>
@@ -466,7 +545,9 @@ export function EmployeesComponent({
                 <Label>Overtime Type</Label>
                 <Select
                   value={overtimeForm.overtime_type}
-                  onValueChange={(value) => setOvertimeForm({ ...overtimeForm, overtime_type: value })}
+                  onValueChange={(value) =>
+                    setOvertimeForm({ ...overtimeForm, overtime_type: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select overtime type" />
@@ -487,7 +568,9 @@ export function EmployeesComponent({
                   step="0.5"
                   placeholder="Enter overtime hours"
                   value={overtimeForm.hours}
-                  onChange={(e) => setOvertimeForm({ ...overtimeForm, hours: e.target.value })}
+                  onChange={(e) =>
+                    setOvertimeForm({ ...overtimeForm, hours: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -497,7 +580,9 @@ export function EmployeesComponent({
                   id="date"
                   type="date"
                   value={overtimeForm.date}
-                  onChange={(e) => setOvertimeForm({ ...overtimeForm, date: e.target.value })}
+                  onChange={(e) =>
+                    setOvertimeForm({ ...overtimeForm, date: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -505,13 +590,19 @@ export function EmployeesComponent({
                 <Switch
                   id="approved"
                   checked={overtimeForm.approved}
-                  onCheckedChange={(checked) => setOvertimeForm({ ...overtimeForm, approved: checked })}
+                  onCheckedChange={(checked) =>
+                    setOvertimeForm({ ...overtimeForm, approved: checked })
+                  }
                 />
                 <Label htmlFor="approved">Approved</Label>
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowOvertimeDialog(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowOvertimeDialog(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={isOvertimeSubmitting}>
