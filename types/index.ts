@@ -161,6 +161,18 @@ export interface HREmployeeComponent {
   amount: string;
 }
 
+export interface HROvertimeEntry {
+  id: number;
+  employee: number;
+  employee_name: string;
+  overtime_type: string;
+  overtime_type_display: string;
+  hours: string;
+  approved: boolean;
+  date: string;
+  created_at: string;
+}
+
 export interface HREmployee {
   id: number;
   user_email_display: string;
@@ -169,6 +181,8 @@ export interface HREmployee {
   position: string;
   salary: string | null;
   components: HREmployeeComponent[];
+  overtime_entries: HROvertimeEntry[];
+  total_overtime_hours: number;
   is_active: boolean;
   created_by: number;
   created_at: string;

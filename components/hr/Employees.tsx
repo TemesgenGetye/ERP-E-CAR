@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
-import { HREmployee, CreateHREmployeeRequest } from "@/types";
+import { HREmployee, HROvertimeEntry, CreateHREmployeeRequest } from "@/types";
 import { useSalaryCpts } from "@/hooks/payroll";
 import { assignSalaryComponent } from "@/lib/payroll";
 import { api } from "@/lib/api";
@@ -415,7 +415,25 @@ export function EmployeesComponent({
                         Assign
                       </Button>
                     </td>
-                    <td className="p-2">
+                    <td className="p-2 text-sm">
+                      {(employee.overtime_entries ?? []).length > 0 ? (
+                        <div className="space-y-1 mb-2">
+                          {(employee.overtime_entries as HROvertimeEntry[]).map((entry) => (
+                            <div key={entry.id} className="flex items-center gap-1 flex-wrap">
+                              <span className="text-muted-foreground text-xs">{new Date(entry.date).toLocaleDateString()}</span>
+                              <span className="text-muted-foreground">·</span>
+                              <span className="font-medium">{entry.hours}h</span>
+                              <span className="text-muted-foreground">·</span>
+                              <span className="text-xs">{entry.overtime_type}x</span>
+                              <span className={`text-xs font-medium ${entry.approved ? "text-green-600" : "text-yellow-600"}`}>
+                                {entry.approved ? "Approved" : "Pending"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground mb-2">—</p>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
