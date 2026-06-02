@@ -39,6 +39,7 @@ export type RegisterDealerPayload = {
   license_number: string;
   tax_id: string;
   telebirr_account: string;
+  business_license: File;
 };
 
 export async function dealerAction(
@@ -108,12 +109,18 @@ function dealerRegistrationErrorMessage(
 export async function registerDealerPublic(
   payload: RegisterDealerPayload,
 ): Promise<unknown> {
+  const formData = new FormData();
+  formData.append("email", payload.email);
+  formData.append("password", payload.password);
+  formData.append("company_name", payload.company_name);
+  formData.append("license_number", payload.license_number);
+  formData.append("tax_id", payload.tax_id);
+  formData.append("telebirr_account", payload.telebirr_account);
+  formData.append("business_license", payload.business_license);
+
   const res = await fetch(`${API_URL}/users/auth/register_dealer/`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
+    body: formData,
   });
 
   if (!res.ok) {
