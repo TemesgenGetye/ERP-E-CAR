@@ -10,11 +10,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect, useRef } from "react";
-import { Eye, EyeOff, Loader2, TriangleAlert, X, Upload } from "lucide-react";
+import { useState, useRef } from "react";
+import { Eye, EyeOff, Loader2, TriangleAlert, X, FileText } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import {
   registerDealerPublic,
   type RegisterDealerPayload,
@@ -25,12 +24,12 @@ type SignupTextFields = Omit<RegisterDealerPayload, "business_license"> & {
 };
 
 export default function SignUpPage() {
-  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
   const [form, setForm] = useState<SignupTextFields>({
     email: "",
@@ -62,20 +61,6 @@ export default function SignUpPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      const imageItem = Array.from(items).find((item) =>
-        item.type.startsWith("image/"),
-      );
-      if (!imageItem) return;
-      const file = imageItem.getAsFile();
-      if (file) applyFile(file);
-    };
-    window.addEventListener("paste", handlePaste);
-    return () => window.removeEventListener("paste", handlePaste);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,13 +87,51 @@ export default function SignUpPage() {
         business_license: licenseFile,
       };
       await registerDealerPublic(payload);
-      router.push("/signin?registered=1");
+      setSubmitted(true);
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "Registration failed");
     } finally {
       setLoading(false);
     }
   };
+
+  if (submitted) {
+    return (
+      <Card className="w-full max-w-lg">
+        <CardContent className="flex flex-col items-center gap-6 py-10 text-center">
+          <Link href="/">
+            <Image
+              src="/logo.svg"
+              alt="hulucars"
+              width={140}
+              height={40}
+              className="h-24 w-auto"
+              priority
+            />
+          </Link>
+          <div className="flex flex-col items-center gap-3">
+            <div className="rounded-full bg-yellow-100 p-4 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold">Application submitted</h2>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Your dealer account is <span className="font-medium text-yellow-600 dark:text-yellow-400">pending review</span>. Our team will verify your details and approve your account. You will be able to sign in once an admin has verified your application.
+            </p>
+          </div>
+          <Link
+            href="/signin"
+            className="text-sm text-primary font-medium hover:underline"
+          >
+            Go to sign in
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-lg">
@@ -199,10 +222,10 @@ export default function SignUpPage() {
             </Label>
             {licensePreview ? (
               <div className="relative w-full rounded-lg overflow-hidden border bg-muted">
-                <img
+                <iframe
                   src={licensePreview}
-                  alt="Business license preview"
-                  className="w-full max-h-48 object-contain"
+                  className="w-full h-64 rounded-lg"
+                  title="Business license preview"
                 />
                 <button
                   type="button"
@@ -214,13 +237,13 @@ export default function SignUpPage() {
               </div>
             ) : (
               <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-muted-foreground/30 rounded-lg py-6 cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors text-muted-foreground hover:text-primary">
-                <Upload className="h-6 w-6" />
-                <span className="text-sm font-medium">Click to upload or paste image</span>
-                <span className="text-xs">PNG, JPG, WEBP</span>
+                <FileText className="h-6 w-6" />
+                <span className="text-sm font-medium">Click to upload PDF</span>
+                <span className="text-xs">PDF only</span>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="application/pdf"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
@@ -229,12 +252,6 @@ export default function SignUpPage() {
                 />
               </label>
             )}
-            <p className="text-xs text-muted-foreground">
-              Tip: You can paste an image directly with{" "}
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">Ctrl+V</kbd>{" "}
-              /{" "}
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-xs font-mono">⌘V</kbd>
-            </p>
           </div>
 
           <div className="grid gap-2">
