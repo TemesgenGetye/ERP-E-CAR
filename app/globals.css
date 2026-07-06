@@ -142,3 +142,28 @@
       transform var(--theme-transition);
   }
 }
+
+/* ── Scrollbar styling ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--theme-primary);
+  border-radius: 999px;
+  opacity: 0.6;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--theme-primary-hover);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-primary) transparent;
+}

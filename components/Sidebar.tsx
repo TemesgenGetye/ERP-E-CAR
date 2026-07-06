@@ -121,7 +121,7 @@ export default function Sidebar() {
             priority
           />
         </Link>
-        <div className="flex-1 overflow-y-auto flex flex-col items-center gap-8 py-2 w-full">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col items-center gap-8 py-2 w-full">
           {links.map((link) => {
             const active =
               link.href === "/"
