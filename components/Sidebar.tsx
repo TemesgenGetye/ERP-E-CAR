@@ -16,12 +16,11 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { clearAuthState } from "@/lib/api";
 import { useUserStore } from "@/store/user";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useProfile } from "@/hooks/useProfile";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function Sidebar() {
@@ -122,7 +121,7 @@ export default function Sidebar() {
             priority
           />
         </Link>
-        <div className="flex flex-col space-y-10 my-30">
+        <div className="flex-1 overflow-y-auto flex flex-col items-center gap-8 py-2 w-full">
           {links.map((link) => {
             const active =
               link.href === "/"
@@ -152,7 +151,7 @@ export default function Sidebar() {
             );
           })}
         </div>
-        <div className="flex gap-10 flex-col absolute bottom-10">
+        <div className="mt-auto flex flex-col items-center gap-6 pb-6">
           <div className="relative group flex items-center flex-col gap-2">
             <Link
               href={"/settings"}
