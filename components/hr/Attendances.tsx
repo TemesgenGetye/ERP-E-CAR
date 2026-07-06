@@ -232,7 +232,7 @@ export function AttendancesComponent({
                       {employees.map((emp) => (
                         <SelectItem
                           key={emp.id}
-                          value={emp.user_email_display}
+                          value={emp.login_email}
                         >
                           {emp.full_name} — {emp.position}
                         </SelectItem>

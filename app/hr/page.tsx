@@ -84,19 +84,19 @@ export default function HRPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+        <div className="mb-6">
+          <h1 className="text-xl md:text-3xl font-bold text-foreground mb-1">
             Human Resource Management
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Manage employees, attendance, contracts, and leave requests
           </p>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -155,32 +155,34 @@ export default function HRPage() {
         </div>
 
         <Tabs defaultValue="employees" className="w-full">
-          <TabsList className="mb-6 border p-4 py-2 h-fit">
-            <TabsTrigger value="employees">
-              <Users className="h-4 w-4 mr-2" />
-              Employees
-            </TabsTrigger>
-            <TabsTrigger value="attendance">
-              <Calendar className="h-4 w-4 mr-2" />
-              Attendance
-            </TabsTrigger>
-            <TabsTrigger value="checklist-attendance">
-              <ClipboardCheck className="h-4 w-4 mr-2" />
-              Checklist Attendance
-            </TabsTrigger>
-            <TabsTrigger value="contracts">
-              <Briefcase className="h-4 w-4 mr-2" />
-              Contracts
-            </TabsTrigger>
-            <TabsTrigger value="leaves">
-              <FileText className="h-4 w-4 mr-2" />
-              Leave Requests
-            </TabsTrigger>
-            <TabsTrigger value="salary">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Salary Components
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto mb-6">
+            <TabsList className="border p-4 py-2 h-fit min-w-max">
+              <TabsTrigger value="employees">
+                <Users className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Employees</span>
+              </TabsTrigger>
+              <TabsTrigger value="attendance">
+                <Calendar className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Attendance</span>
+              </TabsTrigger>
+              <TabsTrigger value="checklist-attendance">
+                <ClipboardCheck className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Checklist</span>
+              </TabsTrigger>
+              <TabsTrigger value="contracts">
+                <Briefcase className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Contracts</span>
+              </TabsTrigger>
+              <TabsTrigger value="leaves">
+                <FileText className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Leaves</span>
+              </TabsTrigger>
+              <TabsTrigger value="salary">
+                <DollarSign className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Salary</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="employees">
             <EmployeesComponent

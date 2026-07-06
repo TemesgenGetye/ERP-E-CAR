@@ -310,7 +310,7 @@ export function ChecklistAttendanceComponent({
                         </td>
                         {days.map((day) => {
                           const date = formatDate(day);
-                          const employeeEmail = employee.user_email_display;
+                          const employeeEmail = employee.login_email;
                           const isChecked =
                             attendanceData[employeeEmail]?.[date]?.checked ||
                             false;

@@ -175,8 +175,13 @@ export interface HROvertimeEntry {
 
 export interface HREmployee {
   id: number;
-  user_email_display: string;
+  login_email: string;
+  email: string | null;
+  first_name: string;
+  last_name: string;
+  contact: string;
   full_name: string;
+  has_account: boolean;
   hire_date: string;
   position: string;
   salary: string | null;
@@ -190,10 +195,14 @@ export interface HREmployee {
 }
 
 export interface CreateHREmployeeRequest {
-  user_email: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  contact: string;
   position: string;
   hire_date: string;
   salary?: string | null;
+  is_active?: boolean;
 }
 
 export interface CarExpense {

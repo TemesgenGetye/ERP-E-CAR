@@ -165,8 +165,8 @@ export function LeavesComponent({
                     </SelectTrigger>
                     <SelectContent>
                       {employees.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.user_email_display}>
-                          {emp.full_name} — {emp.user_email_display}
+                        <SelectItem key={emp.id} value={emp.login_email}>
+                          {emp.full_name} — {emp.login_email}
                         </SelectItem>
                       ))}
                     </SelectContent>

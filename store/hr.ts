@@ -72,7 +72,7 @@ export const useHRStore = create<HRState>((set, get) => ({
   },
 
   createEmployee: async (employee) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       const res = await api<HREmployee>("/hr/employees/", {
         method: "POST",
@@ -83,14 +83,13 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error creating employee:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
 
   updateEmployee: async (id, employee) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       const res = await api<HREmployee>(`/hr/employees/${id}/`, {
         method: "PATCH",
@@ -101,14 +100,13 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error updating employee:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
 
   deleteEmployee: async (id) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       await api(`/hr/employees/${id}/`, {
         method: "DELETE",
@@ -118,8 +116,7 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error deleting employee:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
@@ -139,7 +136,7 @@ export const useHRStore = create<HRState>((set, get) => ({
   },
 
   createAttendance: async (attendance) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       const res = await api<Attendance>("/hr/attendances/", {
         method: "POST",
@@ -150,14 +147,13 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error creating attendance:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
 
   updateAttendance: async (id, attendance) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       const res = await api<Attendance>(`/hr/attendances/${id}/`, {
         method: "PATCH",
@@ -170,14 +166,13 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error updating attendance:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
 
   deleteAttendance: async (id) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       await api(`/hr/attendances/${id}/`, {
         method: "DELETE",
@@ -187,8 +182,7 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error deleting attendance:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
@@ -208,7 +202,7 @@ export const useHRStore = create<HRState>((set, get) => ({
   },
 
   createContract: async (contract) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       const res = await api<Contract>("/hr/contracts/", {
         method: "POST",
@@ -219,14 +213,13 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error creating contract:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
 
   updateContract: async (id, contract) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       const res = await api<Contract>(`/hr/contracts/${id}/`, {
         method: "PATCH",
@@ -239,14 +232,13 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error updating contract:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
 
   deleteContract: async (id) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       await api(`/hr/contracts/${id}/`, {
         method: "DELETE",
@@ -256,14 +248,13 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error deleting contract:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
 
   finalizeContract: async (id, finalDocument) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       const formData = new FormData();
       formData.append("final_document", finalDocument);
@@ -271,38 +262,28 @@ export const useHRStore = create<HRState>((set, get) => ({
         method: "POST",
         body: formData,
       });
-      // Refresh contracts to get updated data
-      const res = await api<Contract[]>("/hr/contracts/", {
-        method: "GET",
-      });
+      const res = await api<Contract[]>("/hr/contracts/", { method: "GET" });
       set({ contracts: res, isLoading: false });
     } catch (error) {
-      console.error("Error finalizing contract:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
 
   sendContractToEmployee: async (id) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
-      await api(`/hr/contracts/${id}/send_to_employee/`, {
-        method: "POST",
-      });
-      // Refresh contracts to get updated data
-      const res = await api<Contract[]>("/hr/contracts/", {
-        method: "GET",
-      });
+      await api(`/hr/contracts/${id}/send_to_employee/`, { method: "POST" });
+      const res = await api<Contract[]>("/hr/contracts/", { method: "GET" });
       set({ contracts: res, isLoading: false });
     } catch (error) {
-      console.error("Error sending contract to employee:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
 
   uploadSignedContract: async (id, signedDocument) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       const formData = new FormData();
       formData.append("signed_document", signedDocument);
@@ -310,14 +291,10 @@ export const useHRStore = create<HRState>((set, get) => ({
         method: "POST",
         body: formData,
       });
-      // Refresh contracts to get updated data
-      const res = await api<Contract[]>("/hr/contracts/", {
-        method: "GET",
-      });
+      const res = await api<Contract[]>("/hr/contracts/", { method: "GET" });
       set({ contracts: res, isLoading: false });
     } catch (error) {
-      console.error("Error uploading signed contract:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
@@ -337,7 +314,7 @@ export const useHRStore = create<HRState>((set, get) => ({
   },
 
   createLeave: async (leave) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       const res = await api<Leave>("/hr/leaves/", {
         method: "POST",
@@ -348,14 +325,13 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error creating leave:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
 
   updateLeave: async (id, leave) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       const res = await api<Leave>(`/hr/leaves/${id}/`, {
         method: "PATCH",
@@ -366,14 +342,13 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error updating leave:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },
 
   deleteLeave: async (id) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       await api(`/hr/leaves/${id}/`, {
         method: "DELETE",
@@ -383,8 +358,7 @@ export const useHRStore = create<HRState>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      console.error("Error deleting leave:", error);
-      set({ error: (error as Error).message, isLoading: false });
+      set({ isLoading: false });
       throw error;
     }
   },

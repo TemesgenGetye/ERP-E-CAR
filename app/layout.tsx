@@ -42,7 +42,7 @@ html {
             <Providers>
               {/* sidebar */}
               <Sidebar />
-              <main className="flex-1 ml-16 overflow-y-auto max-h-screen p-4 py-0 bg-background pt-20">
+              <main className="flex-1 md:ml-20 overflow-y-auto max-h-screen px-3 md:px-4 pb-20 md:pb-4 bg-background pt-20">
                 <Header />
                 <div className="root">{children}</div>
               </main>

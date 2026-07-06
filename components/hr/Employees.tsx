@@ -31,7 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import { HREmployee, HROvertimeEntry, CreateHREmployeeRequest } from "@/types";
 import { useSalaryCpts } from "@/hooks/payroll";
 import { assignSalaryComponent } from "@/lib/payroll";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useHRStore } from "@/store/hr";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 
 interface EmployeesProps {
   employees: HREmployee[];
@@ -55,10 +56,14 @@ interface EmployeesProps {
 }
 
 const emptyForm = (): CreateHREmployeeRequest => ({
-  user_email: "",
+  email: "",
+  first_name: "",
+  last_name: "",
+  contact: "",
   position: "",
   hire_date: "",
   salary: null,
+  is_active: true,
 });
 
 export function EmployeesComponent({
@@ -90,61 +95,94 @@ export function EmployeesComponent({
     date: "",
   });
   const [isOvertimeSubmitting, setIsOvertimeSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
 
   const { salaryCpts } = useSalaryCpts();
   const safeSalaryCpts = salaryCpts || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
     try {
       if (editingEmployee) {
         await updateEmployee(editingEmployee.id, {
+          first_name: form.first_name,
+          last_name: form.last_name,
+          contact: form.contact,
           position: form.position,
           hire_date: form.hire_date,
           salary: form.salary,
+          is_active: form.is_active,
         });
       } else {
         await createEmployee({
-          user_email: form.user_email.trim(),
+          email: form.email.trim(),
+          first_name: form.first_name,
+          last_name: form.last_name,
+          contact: form.contact,
           position: form.position,
           hire_date: form.hire_date,
           salary: form.salary,
+          is_active: form.is_active,
         });
       }
+      const wasEditing = !!editingEmployee;
       setShowDialog(false);
       setEditingEmployee(null);
       setForm(emptyForm());
-    } catch (error) {
+      setFieldErrors({});
       toast({
-        title: "Error",
-        description: "Failed to save employee. Please try again.",
-        variant: "destructive",
+        title: "Success",
+        description: wasEditing ? "Employee updated successfully." : "Employee created successfully.",
+        variant: "success",
       });
+    } catch (error) {
+      if (error instanceof ApiError && Object.keys(error.fieldErrors).length > 0) {
+        const flat: Record<string, string> = {};
+        for (const [field, msgs] of Object.entries(error.fieldErrors)) {
+          flat[field] = msgs[0];
+          toast({ title: field.replace(/_/g, " "), description: msgs[0], variant: "destructive" });
+        }
+        setFieldErrors(flat);
+      } else {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to save employee.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const handleEdit = (employee: HREmployee) => {
     setEditingEmployee(employee);
+    const [firstName = "", ...rest] = employee.full_name.split(" ");
     setForm({
-      user_email: employee.user_email_display,
+      email: employee.login_email,
+      first_name: firstName,
+      last_name: rest.join(" "),
+      contact: "",
       position: employee.position,
       hire_date: employee.hire_date || "",
       salary: employee.salary,
+      is_active: employee.is_active,
     });
     setShowDialog(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this employee?")) {
-      try {
-        await deleteEmployee(id);
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to delete employee. Please try again.",
-          variant: "destructive",
-        });
-      }
+  const handleConfirmDelete = async () => {
+    if (deleteTargetId === null) return;
+    try {
+      await deleteEmployee(deleteTargetId);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete employee. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteTargetId(null);
     }
   };
 
@@ -258,7 +296,7 @@ export function EmployeesComponent({
             Manage employee records and information
           </p>
         </div>
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) setFieldErrors({}); }}>
           <DialogTrigger asChild>
             <Button
               onClick={() => {
@@ -284,28 +322,64 @@ export function EmployeesComponent({
             <form onSubmit={handleSubmit}>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="user_email">Email</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
-                    id="user_email"
+                    id="email"
                     type="email"
-                    value={form.user_email}
-                    onChange={(e) =>
-                      setForm({ ...form, user_email: e.target.value })
-                    }
+                    value={form.email}
+                    onChange={(e) => { setForm({ ...form, email: e.target.value }); setFieldErrors((p) => ({ ...p, email: "" })); }}
                     required
                     disabled={!!editingEmployee}
+                    className={fieldErrors.email ? "border-red-500" : ""}
                   />
+                  {fieldErrors.email && <p className="text-xs text-red-500">{fieldErrors.email}</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="first_name">First name</Label>
+                    <Input
+                      id="first_name"
+                      value={form.first_name}
+                      onChange={(e) => { setForm({ ...form, first_name: e.target.value }); setFieldErrors((p) => ({ ...p, first_name: "" })); }}
+                      required
+                      className={fieldErrors.first_name ? "border-red-500" : ""}
+                    />
+                    {fieldErrors.first_name && <p className="text-xs text-red-500">{fieldErrors.first_name}</p>}
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="last_name">Last name</Label>
+                    <Input
+                      id="last_name"
+                      value={form.last_name}
+                      onChange={(e) => { setForm({ ...form, last_name: e.target.value }); setFieldErrors((p) => ({ ...p, last_name: "" })); }}
+                      required
+                      className={fieldErrors.last_name ? "border-red-500" : ""}
+                    />
+                    {fieldErrors.last_name && <p className="text-xs text-red-500">{fieldErrors.last_name}</p>}
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="contact">Contact</Label>
+                  <Input
+                    id="contact"
+                    placeholder="Phone number"
+                    value={form.contact}
+                    onChange={(e) => { setForm({ ...form, contact: e.target.value }); setFieldErrors((p) => ({ ...p, contact: "" })); }}
+                    required
+                    className={fieldErrors.contact ? "border-red-500" : ""}
+                  />
+                  {fieldErrors.contact && <p className="text-xs text-red-500">{fieldErrors.contact}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="position">Position</Label>
                   <Input
                     id="position"
                     value={form.position}
-                    onChange={(e) =>
-                      setForm({ ...form, position: e.target.value })
-                    }
+                    onChange={(e) => { setForm({ ...form, position: e.target.value }); setFieldErrors((p) => ({ ...p, position: "" })); }}
                     required
+                    className={fieldErrors.position ? "border-red-500" : ""}
                   />
+                  {fieldErrors.position && <p className="text-xs text-red-500">{fieldErrors.position}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="hire_date">Hire Date</Label>
@@ -313,11 +387,11 @@ export function EmployeesComponent({
                     id="hire_date"
                     type="date"
                     value={form.hire_date}
-                    onChange={(e) =>
-                      setForm({ ...form, hire_date: e.target.value })
-                    }
+                    onChange={(e) => { setForm({ ...form, hire_date: e.target.value }); setFieldErrors((p) => ({ ...p, hire_date: "" })); }}
                     required
+                    className={fieldErrors.hire_date ? "border-red-500" : ""}
                   />
+                  {fieldErrors.hire_date && <p className="text-xs text-red-500">{fieldErrors.hire_date}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="salary">Salary (optional)</Label>
@@ -326,10 +400,20 @@ export function EmployeesComponent({
                     type="number"
                     step="0.01"
                     value={form.salary ?? ""}
-                    onChange={(e) =>
-                      setForm({ ...form, salary: e.target.value || null })
+                    onChange={(e) => { setForm({ ...form, salary: e.target.value || null }); setFieldErrors((p) => ({ ...p, salary: "" })); }}
+                    className={fieldErrors.salary ? "border-red-500" : ""}
+                  />
+                  {fieldErrors.salary && <p className="text-xs text-red-500">{fieldErrors.salary}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="is_active"
+                    checked={form.is_active ?? true}
+                    onCheckedChange={(checked) =>
+                      setForm({ ...form, is_active: checked })
                     }
                   />
+                  <Label htmlFor="is_active">Active</Label>
                 </div>
               </div>
               <DialogFooter>
@@ -350,19 +434,19 @@ export function EmployeesComponent({
       </CardHeader>
 
       <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="overflow-x-auto -mx-4 md:mx-0">
+          <table className="w-full border-collapse min-w-[700px]">
             <thead>
               <tr className="border-b">
-                <th className="text-left p-2">Name</th>
-                <th className="text-left p-2">Email</th>
-                <th className="text-left p-2">Position</th>
-                <th className="text-left p-2">Hire Date</th>
-                <th className="text-left p-2">Status</th>
-                <th className="text-left p-2">Components</th>
-                <th className="text-left p-2">Salary Cpt</th>
-                <th className="text-left p-2">Overtime</th>
-                <th className="text-right p-2">Actions</th>
+                <th className="text-left p-2 text-xs md:text-sm whitespace-nowrap">Name</th>
+                <th className="text-left p-2 text-xs md:text-sm whitespace-nowrap">Email</th>
+                <th className="text-left p-2 text-xs md:text-sm whitespace-nowrap">Position</th>
+                <th className="text-left p-2 text-xs md:text-sm whitespace-nowrap">Hire Date</th>
+                <th className="text-left p-2 text-xs md:text-sm whitespace-nowrap">Status</th>
+                <th className="text-left p-2 text-xs md:text-sm whitespace-nowrap">Components</th>
+                <th className="text-left p-2 text-xs md:text-sm whitespace-nowrap">Salary Cpt</th>
+                <th className="text-left p-2 text-xs md:text-sm whitespace-nowrap">Overtime</th>
+                <th className="text-right p-2 text-xs md:text-sm whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -371,7 +455,7 @@ export function EmployeesComponent({
                   <tr key={employee.id} className="border-b hover:bg-gray-50">
                     <td className="p-2 font-medium">{employee.full_name}</td>
                     <td className="p-2 text-sm text-muted-foreground">
-                      {employee.user_email_display}
+                      {employee.email || employee.login_email}
                     </td>
                     <td className="p-2 text-sm">{employee.position}</td>
                     <td className="p-2 text-sm">
@@ -458,7 +542,7 @@ export function EmployeesComponent({
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDelete(employee.id)}
+                            onClick={() => setDeleteTargetId(employee.id)}
                             className="text-red-600"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
@@ -630,6 +714,12 @@ export function EmployeesComponent({
           </form>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}
+        onConfirm={handleConfirmDelete}
+      />
     </Card>
   );
 }

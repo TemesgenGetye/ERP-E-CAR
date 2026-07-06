@@ -30,7 +30,7 @@ export default function Header() {
   if (isAuthPage) return null;
   return (
     <div
-      className="flex items-center justify-between mb-6 px-6 fixed top-0 w-[calc(100%-80px)] left-20 bg-background/70  z-50 py-4"
+      className="flex items-center justify-between mb-6 px-4 md:px-6 fixed top-0 w-full md:w-[calc(100%-80px)] left-0 md:left-20 bg-background/70 z-50 py-4"
       style={{ backdropFilter: "blur(20px)" }}
     >
       <div className="flex items-center space-x-4"></div>

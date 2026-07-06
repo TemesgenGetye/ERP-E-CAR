@@ -102,85 +102,125 @@ export default function Sidebar() {
   if (isAuthPage || isLoading) return null;
 
   return (
-    <aside
-      key={`sidebar-${userRole}`}
-      className={`w-20 bg-primary flex flex-col items-center py-6 space-y-6 fixed left-0 top-0 h-full border-r border-primary-hover/20 z-10 ${
-        isAuthPage && "hidden"
-      }`}
-    >
-      {/* logo */}
-      <Link
-        href={"/"}
-        className="flex items-center gap-2 cursor-pointer bg-white rounded-full size-[70px]"
+    <>
+      {/* ── Desktop sidebar (md+) ── */}
+      <aside
+        key={`sidebar-${userRole}`}
+        className="hidden md:flex w-20 bg-primary flex-col items-center py-6 space-y-6 fixed left-0 top-0 h-full border-r border-primary-hover/20 z-10"
       >
-        <Image
-          src="/logo.svg"
-          alt="hulucars"
-          width={140}
-          height={40}
-          className="h-[50px] w-auto"
-          priority
-        />
-      </Link>
-      <div className="flex flex-col space-y-10 my-30">
-        {links.map((link) => {
-          const active =
-            link.href === "/"
-              ? pathName === link.href
-              : pathName.includes(link.href);
-          return (
-            <div
-              key={link.href}
-              className="relative group flex items-center flex-col gap-2"
+        {/* logo */}
+        <Link
+          href={"/"}
+          className="flex items-center gap-2 cursor-pointer bg-white rounded-full size-[70px]"
+        >
+          <Image
+            src="/logo.svg"
+            alt="hulucars"
+            width={140}
+            height={40}
+            className="h-[50px] w-auto"
+            priority
+          />
+        </Link>
+        <div className="flex flex-col space-y-10 my-30">
+          {links.map((link) => {
+            const active =
+              link.href === "/"
+                ? pathName === link.href
+                : pathName.includes(link.href);
+            return (
+              <div
+                key={link.href}
+                className="relative group flex items-center flex-col gap-2"
+              >
+                <Link
+                  href={link.href}
+                  className={`hover:bg-primary-hover hover:text-white cursor-pointer size-10 rounded-full grid place-items-center transition-colors ${
+                    active
+                      ? "bg-white text-primary shadow-md"
+                      : "text-primary-foreground bg-transparent"
+                  }`}
+                >
+                  <link.icon className="h-6 w-6" />
+                </Link>
+                <div className="transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out pointer-events-none whitespace-nowrap">
+                  <span className="text-white text-xs px-2 py-1 rounded">
+                    {link.label}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex gap-10 flex-col absolute bottom-10">
+          <div className="relative group flex items-center flex-col gap-2">
+            <Link
+              href={"/settings"}
+              className="text-primary-foreground hover:bg-primary-hover hover:text-white cursor-pointer size-10 rounded-full grid place-items-center transition-colors"
             >
+              <Settings className="size-5" />
+            </Link>
+            <div className="top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out pointer-events-none whitespace-nowrap">
+              <span className="text-white text-xs px-2 py-1 rounded">Settings</span>
+            </div>
+          </div>
+          <div className="relative group flex items-center flex-col gap-2">
+            <button
+              onClick={handleLogout}
+              className="text-primary-foreground hover:bg-primary-hover hover:text-white cursor-pointer size-10 rounded-full grid place-items-center transition-colors"
+            >
+              <LogOut className="size-5" />
+            </button>
+            <div className="top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out pointer-events-none whitespace-nowrap">
+              <span className="text-white text-xs px-2 py-1 rounded">Logout</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Mobile bottom nav (< md) ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-10 bg-primary border-t border-primary-hover/20">
+        <div className="flex items-center justify-around px-1 py-1">
+          {links.map((link) => {
+            const active =
+              link.href === "/"
+                ? pathName === link.href
+                : pathName.includes(link.href);
+            return (
               <Link
+                key={link.href}
                 href={link.href}
-                className={`hover:bg-primary-hover hover:text-white cursor-pointer size-10 rounded-full grid place-items-center transition-colors ${
+                className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-colors ${
                   active
-                    ? " bg-white text-primary shadow-md"
-                    : "text-primary-foreground bg-transparent"
+                    ? "bg-white text-primary"
+                    : "text-primary-foreground hover:bg-primary-hover"
                 }`}
               >
-                <link.icon className="h-6 w-6" />
+                <link.icon className="h-5 w-5" />
+                <span className="text-[10px] leading-none">{link.label}</span>
               </Link>
-              {/* Hover Label */}
-              <div className="transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out pointer-events-none whitespace-nowrap">
-                <span className="text-white text-xs px-2 py-1 rounded">
-                  {link.label}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex gap-10 flex-col absolute bottom-10">
-        <div className="relative group flex items-center flex-col gap-2">
+            );
+          })}
           <Link
-            href={"/settings"}
-            className="text-primary-foreground hover:bg-primary-hover hover:text-white cursor-pointer size-10 rounded-full grid place-items-center transition-colors"
+            href="/settings"
+            className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-colors ${
+              pathName.includes("/settings")
+                ? "bg-white text-primary"
+                : "text-primary-foreground hover:bg-primary-hover"
+            }`}
           >
-            <Settings className="size-5" />
+            <Settings className="h-5 w-5" />
+            <span className="text-[10px] leading-none">Settings</span>
           </Link>
-          {/* Hover Label */}
-          <div className=" top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out pointer-events-none whitespace-nowrap">
-            <span className="text-white text-xs px-2 py-1 rounded">
-              Settings
-            </span>
-          </div>
-        </div>
-        <div className="relative group flex items-center flex-col gap-2">
           <button
             onClick={handleLogout}
-            className="text-primary-foreground hover:bg-primary-hover hover:text-white cursor-pointer size-10 rounded-full grid place-items-center transition-colors"
+            className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-primary-foreground hover:bg-primary-hover transition-colors"
           >
-            <LogOut className="size-5" />
+            <LogOut className="h-5 w-5" />
+            <span className="text-[10px] leading-none">Logout</span>
           </button>
-          {/* Hover Label */}
-          <div className=" top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out pointer-events-none whitespace-nowrap">
-            <span className="text-white text-xs px-2 py-1 rounded">Logout</span>
-          </div>
         </div>
-      </div>
-    </aside>
+      </nav>
+    </>
   );
 }

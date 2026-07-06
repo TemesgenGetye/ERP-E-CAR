@@ -2,6 +2,20 @@ import { API_URL } from "./config";
 
 type Options = RequestInit & { skipAuth?: boolean };
 
+export class ApiError extends Error {
+  fieldErrors: Record<string, string[]>;
+  constructor(message: string, body: Record<string, unknown>) {
+    super(message);
+    this.name = "ApiError";
+    this.fieldErrors = {};
+    for (const [key, val] of Object.entries(body)) {
+      if (Array.isArray(val) && val.every((v) => typeof v === "string")) {
+        this.fieldErrors[key] = val as string[];
+      }
+    }
+  }
+}
+
 function decodeToken(token: string) {
   try {
     const base64Url = token.split(".")[1];
@@ -243,16 +257,20 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   if (!res.ok) {
     const errorText = await res.text().catch(() => "");
     let errorMessage = `HTTP ${res.status}`;
+    let errorBody: Record<string, unknown> = {};
 
     try {
-      const errorJson = JSON.parse(errorText);
+      errorBody = JSON.parse(errorText);
       errorMessage =
-        errorJson.message || errorJson.detail || errorText || errorMessage;
+        (errorBody.message as string) ||
+        (errorBody.detail as string) ||
+        errorText ||
+        errorMessage;
     } catch {
       errorMessage = errorText || errorMessage;
     }
 
-    throw new Error(errorMessage);
+    throw new ApiError(errorMessage, errorBody);
   }
 
   const contentType = res.headers.get("content-type");
