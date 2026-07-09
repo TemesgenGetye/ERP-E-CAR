@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Input } from "./ui/input";
-import { Search, Bell } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -77,8 +76,10 @@ export default function Header() {
                   : userRole === "accountant"
                     ? "Accountant"
                     : userRole === "seller"
-                      ? "Seller"
-                      : ""}
+                      ? "Sales"
+                      : userRole === "finance"
+                        ? "Finance"
+                        : ""}
             </span>
           </div>
         </Link>

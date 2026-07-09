@@ -8,6 +8,8 @@ import {
   Clock,
   CheckCircle,
   Plus,
+  Check,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,6 +99,9 @@ export function EmployeesComponent({
   const [isOvertimeSubmitting, setIsOvertimeSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [editingComponentId, setEditingComponentId] = useState<number | null>(null);
+  const [editingComponentAmount, setEditingComponentAmount] = useState("");
+  const [componentActionLoading, setComponentActionLoading] = useState<number | null>(null);
 
   const { salaryCpts } = useSalaryCpts();
   const safeSalaryCpts = salaryCpts || [];
@@ -183,6 +188,38 @@ export function EmployeesComponent({
       });
     } finally {
       setDeleteTargetId(null);
+    }
+  };
+
+  const handleDeleteComponent = async (componentId: number) => {
+    setComponentActionLoading(componentId);
+    try {
+      await api(`/hr/employee-salaries/${componentId}/`, { method: "DELETE" });
+      await getEmployees();
+      toast({ title: "Success", description: "Salary component removed.", variant: "success" });
+    } catch {
+      toast({ title: "Error", description: "Failed to remove salary component.", variant: "destructive" });
+    } finally {
+      setComponentActionLoading(null);
+    }
+  };
+
+  const handleUpdateComponent = async (componentId: number, employeeId: number, salaryComponentId: number) => {
+    if (!editingComponentAmount) return;
+    setComponentActionLoading(componentId);
+    try {
+      await api(`/hr/employee-salaries/${componentId}/`, {
+        method: "PATCH",
+        body: { employee: employeeId, component: salaryComponentId, amount: editingComponentAmount } as any,
+      });
+      await getEmployees();
+      setEditingComponentId(null);
+      setEditingComponentAmount("");
+      toast({ title: "Success", description: "Amount updated.", variant: "success" });
+    } catch {
+      toast({ title: "Error", description: "Failed to update amount.", variant: "destructive" });
+    } finally {
+      setComponentActionLoading(null);
     }
   };
 
@@ -457,7 +494,7 @@ export function EmployeesComponent({
                     <td className="p-2 text-sm text-muted-foreground">
                       {employee.email || employee.login_email}
                     </td>
-                    <td className="p-2 text-sm">{employee.position}</td>
+                    <td className="p-2 text-sm">{employee.position?.toLowerCase() === "seller" ? "Sales" : employee.position}</td>
                     <td className="p-2 text-sm">
                       {employee.hire_date ? (
                         new Date(employee.hire_date).toLocaleDateString()
@@ -474,14 +511,55 @@ export function EmployeesComponent({
                     </td>
                     <td className="p-2 text-sm">
                       {employee.components.length > 0 ? (
-                        <div className="space-y-0.5">
+                        <div className="space-y-1">
                           {employee.components.map((c) => (
-                            <div key={c.id} className="flex items-center gap-1">
-                              <span>{c.component_name}</span>
+                            <div key={c.id} className="flex items-center gap-1 flex-wrap">
+                              <span className="text-xs">{c.component_name}</span>
                               <span className="text-muted-foreground">·</span>
-                              <span className="font-medium text-green-700">
-                                ETB {parseFloat(c.amount).toLocaleString()}
-                              </span>
+                              {editingComponentId === c.id ? (
+                                <>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={editingComponentAmount}
+                                    onChange={(e) => setEditingComponentAmount(e.target.value)}
+                                    className="h-6 w-24 text-xs px-1"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => handleUpdateComponent(c.id, employee.id, c.component)}
+                                    disabled={componentActionLoading === c.id}
+                                    className="text-green-600 hover:text-green-700 cursor-pointer disabled:opacity-50"
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => { setEditingComponentId(null); setEditingComponentAmount(""); }}
+                                    className="text-muted-foreground hover:text-foreground cursor-pointer"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="font-medium text-green-700 text-xs">
+                                    ETB {parseFloat(c.amount).toLocaleString()}
+                                  </span>
+                                  <button
+                                    onClick={() => { setEditingComponentId(c.id); setEditingComponentAmount(c.amount); }}
+                                    className="text-muted-foreground hover:text-primary cursor-pointer"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteComponent(c.id)}
+                                    disabled={componentActionLoading === c.id}
+                                    className="text-muted-foreground hover:text-red-500 cursor-pointer disabled:opacity-50"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           ))}
                         </div>

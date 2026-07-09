@@ -157,6 +157,7 @@ export interface CreateDealerStaffRequest {
 
 export interface HREmployeeComponent {
   id: number;
+  component: number;
   component_name: string;
   amount: string;
 }
