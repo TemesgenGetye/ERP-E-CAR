@@ -72,8 +72,9 @@ export default function HRPage() {
   }
 
   const staffCount = employees.length;
+  const todayStr = new Date().toISOString().slice(0, 10);
   const presentAttendances = attendances.filter(
-    (att) => att.status === "present",
+    (att) => att.status === "present" && att.date === todayStr,
   ).length;
   const activeContracts = contracts.filter(
     (cont) => cont.status === "active",

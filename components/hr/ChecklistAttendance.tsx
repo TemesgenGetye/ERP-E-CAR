@@ -13,7 +13,7 @@ import {
 import { HREmployee, Attendance, CreateAttendanceRequest } from "@/types";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChecklistAttendanceProps {
   employees: HREmployee[];
@@ -21,7 +21,7 @@ interface ChecklistAttendanceProps {
   createAttendance: (attendance: CreateAttendanceRequest) => Promise<void>;
   updateAttendance: (
     id: number,
-    attendance: Partial<CreateAttendanceRequest>
+    attendance: Partial<CreateAttendanceRequest>,
   ) => Promise<void>;
   deleteAttendance: (id: number) => Promise<void>;
 }
@@ -115,8 +115,9 @@ export function ChecklistAttendanceComponent({
   const handleCheckboxChange = async (
     employeeEmail: string,
     day: number,
-    checked: boolean
+    checked: boolean,
   ) => {
+    if (!employeeEmail) return;
     const date = formatDate(day);
     const cellKey = `${employeeEmail}-${date}`;
     const existingAttendance = attendanceData[employeeEmail]?.[date];
@@ -150,6 +151,7 @@ export function ChecklistAttendanceComponent({
         });
         toast({
           title: "Attendance saved",
+          variant: "success",
           description: `${employeeEmail} marked present for ${date}`,
         });
       } else {
@@ -159,6 +161,7 @@ export function ChecklistAttendanceComponent({
         }
         toast({
           title: "Attendance removed",
+          variant: "success",
           description: `${employeeEmail} marked absent for ${date}`,
         });
       }
@@ -205,6 +208,8 @@ export function ChecklistAttendanceComponent({
   };
 
   const activeEmployees = employees;
+
+  console.log("active employees", activeEmployees);
 
   return (
     <Card>
@@ -310,7 +315,7 @@ export function ChecklistAttendanceComponent({
                         </td>
                         {days.map((day) => {
                           const date = formatDate(day);
-                          const employeeEmail = employee.login_email;
+                          const employeeEmail = employee.login_email || employee.email || "";
                           const isChecked =
                             attendanceData[employeeEmail]?.[date]?.checked ||
                             false;
@@ -330,7 +335,7 @@ export function ChecklistAttendanceComponent({
                                     handleCheckboxChange(
                                       employeeEmail,
                                       day,
-                                      checked as boolean
+                                      checked as boolean,
                                     )
                                   }
                                   aria-label={`${employee.full_name} - Day ${day}`}
@@ -349,7 +354,8 @@ export function ChecklistAttendanceComponent({
         ) : (
           <div className="text-center py-8">
             <p className="text-muted-foreground">
-              No staff found. Add staff on the Employees tab to track attendance.
+              No staff found. Add staff on the Employees tab to track
+              attendance.
             </p>
           </div>
         )}
