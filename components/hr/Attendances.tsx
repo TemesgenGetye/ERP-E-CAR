@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Attendance, CreateAttendanceRequest, HREmployee } from "@/types";
+import { useToast } from "@/hooks/use-toast";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 
 interface AttendancesProps {
   attendances: Attendance[];
@@ -51,9 +53,10 @@ export function AttendancesComponent({
   deleteAttendance,
 }: AttendancesProps) {
   const [showDialog, setShowDialog] = useState(false);
-  const [editingAttendance, setEditingAttendance] = useState<Attendance | null>(
-    null
-  );
+  const [editingAttendance, setEditingAttendance] = useState<Attendance | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
   const [form, setForm] = useState<CreateAttendanceRequest>({
     employee_email: "",
@@ -84,19 +87,21 @@ export function AttendancesComponent({
       await createAttendance({
         employee_email: employeeEmail,
         entry_time: now,
-        exit_time: now, // Will be updated later
+        exit_time: now,
         date: today,
         status: "present",
         notes: "Quick check-in",
       });
+      toast({ title: "Attendance recorded", variant: "success", description: "Marked present successfully." });
     } catch (error) {
       console.error("Error recording attendance:", error);
-      alert("Failed to record attendance. Please try again.");
+      toast({ title: "Failed to record attendance", variant: "destructive", description: "Please try again." });
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const wasEditing = !!editingAttendance;
     try {
       if (editingAttendance) {
         await updateAttendance(editingAttendance.id, form);
@@ -113,9 +118,14 @@ export function AttendancesComponent({
         status: "present",
         notes: "",
       });
+      toast({
+        title: wasEditing ? "Attendance updated" : "Attendance recorded",
+        variant: "success",
+        description: wasEditing ? "Record updated successfully." : "Attendance saved successfully.",
+      });
     } catch (error) {
       console.error("Error saving attendance:", error);
-      alert("Failed to save attendance. Please try again.");
+      toast({ title: "Failed to save attendance", variant: "destructive", description: "Please try again." });
     }
   };
 
@@ -137,14 +147,18 @@ export function AttendancesComponent({
     setShowDialog(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this attendance record?")) {
-      try {
-        await deleteAttendance(id);
-      } catch (error) {
-        console.error("Error deleting attendance:", error);
-        alert("Failed to delete attendance. Please try again.");
-      }
+  const handleDelete = async () => {
+    if (deleteTargetId === null) return;
+    setIsDeleting(true);
+    try {
+      await deleteAttendance(deleteTargetId);
+      setDeleteTargetId(null);
+      toast({ title: "Attendance deleted", variant: "success", description: "Record removed successfully." });
+    } catch (error) {
+      console.error("Error deleting attendance:", error);
+      toast({ title: "Failed to delete attendance", variant: "destructive", description: "Please try again." });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -452,7 +466,7 @@ export function AttendancesComponent({
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => handleDelete(attendance.id)}
+                              onClick={() => setDeleteTargetId(attendance.id)}
                               className="text-red-600"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -483,6 +497,15 @@ export function AttendancesComponent({
           </div>
         )}
       </CardContent>
+
+      <DeleteConfirmDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}
+        onConfirm={handleDelete}
+        isLoading={isDeleting}
+        title="Delete Attendance Record"
+        description="Are you sure you want to delete this attendance record? This action cannot be undone."
+      />
     </Card>
   );
 }

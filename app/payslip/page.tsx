@@ -1,21 +1,34 @@
 "use client";
 
-import { FileText, Download, RefreshCw, User } from "lucide-react";
+import { FileText, Download, RefreshCw, User, Mail, Phone, Briefcase, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePayslip } from "@/hooks/payslip";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useState } from "react";
-import { useEmployee } from "@/hooks/useEmployee";
+import { Separator } from "@/components/ui/separator";
 
 interface PayslipLineItem {
   name: string;
   amount: string;
 }
 
+interface EmployeeInfo {
+  id: number;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  email: string;
+  contact: string;
+  position: string;
+  hire_date: string;
+}
+
 interface PayslipItem {
-  employee: number;
+  employee: EmployeeInfo;
+  payroll_run: number;
+  processed_at: string;
   gross_earnings: string;
   total_deductions: string;
   net_salary: string;
@@ -34,40 +47,70 @@ function PayslipCard({
   index: number;
   onDownload: (payslip: PayslipItem, index: number) => void;
 }) {
-  const { data: staffInfo } = useEmployee(payslip.employee);
+  const { employee } = payslip;
 
   const formatCurrency = (amount: string) => {
     const num = parseFloat(amount);
     return isNaN(num) ? amount : `ETB ${num.toLocaleString()}`;
   };
 
-  const employeeName = staffInfo?.full_name || staffInfo?.user_email_display || `Employee #${payslip.employee}`;
-  const employeeRole = staffInfo?.position ?? null;
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
   return (
     <Card className="shadow-none bg-transparent">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-              <User className="h-5 w-5 text-muted-foreground" />
+            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <User className="h-6 w-6 text-muted-foreground" />
             </div>
             <div>
-              <p className="font-semibold text-sm">{employeeName}</p>
-              {employeeRole && (
-                <p className="text-xs text-muted-foreground capitalize">{employeeRole}</p>
-              )}
+              <p className="font-bold text-base">{employee.full_name || `${employee.first_name} ${employee.last_name}`.trim() || "—"}</p>
+              <p className="text-sm text-muted-foreground capitalize">{employee.position}</p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onDownload(payslip, index)}
-            disabled={downloadingIndex === index}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            {downloadingIndex === index ? "Generating..." : "Download"}
-          </Button>
+          <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground">
+            <span>Payroll Run #{payslip.payroll_run}</span>
+            <span>Processed: {formatDate(payslip.processed_at)}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-1"
+              onClick={() => onDownload(payslip, index)}
+              disabled={downloadingIndex === index}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {downloadingIndex === index ? "Generating..." : "Download"}
+            </Button>
+          </div>
+        </div>
+
+        <Separator className="mt-4" />
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-sm">
+          {employee.email && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Mail className="h-4 w-4 shrink-0" />
+              <span className="truncate">{employee.email}</span>
+            </div>
+          )}
+          {employee.contact && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Phone className="h-4 w-4 shrink-0" />
+              <span>{employee.contact}</span>
+            </div>
+          )}
+          {employee.hire_date && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Calendar className="h-4 w-4 shrink-0" />
+              <span>Hired {formatDate(employee.hire_date)}</span>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -164,12 +207,18 @@ export default function PayslipPage() {
       let y = 20;
 
       doc.setFillColor(30, 64, 175);
-      doc.rect(0, 0, pageW, 40, "F");
+      doc.rect(0, 0, pageW, 50, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
-      doc.text("PAYSLIP", pageW / 2, 18, { align: "center" });
-      y = 55;
+      doc.text("PAYSLIP", pageW / 2, 16, { align: "center" });
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      doc.text(payslip.employee.full_name || `${payslip.employee.first_name} ${payslip.employee.last_name}`.trim(), pageW / 2, 27, { align: "center" });
+      doc.setFontSize(9);
+      doc.text(`${payslip.employee.position}  •  Payroll Run #${payslip.payroll_run}`, pageW / 2, 36, { align: "center" });
+      doc.text(`Processed: ${new Date(payslip.processed_at).toLocaleDateString()}`, pageW / 2, 44, { align: "center" });
+      y = 62;
 
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(13);
@@ -257,7 +306,8 @@ export default function PayslipPage() {
         { align: "right" }
       );
 
-      doc.save(`payslip-employee-${payslip.employee}.pdf`);
+      const safeName = (payslip.employee.full_name || `employee-${payslip.employee.id}`).replace(/\s+/g, "-").toLowerCase();
+      doc.save(`payslip-${safeName}-run${payslip.payroll_run}.pdf`);
     } finally {
       setDownloadingIndex(null);
     }
