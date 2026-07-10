@@ -1,40 +1,13 @@
 "use client";
 
-import { FileText, Download, RefreshCw, User, Mail, Phone, Briefcase, Calendar } from "lucide-react";
+import { FileText, Download, RefreshCw, User, Mail, Phone, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePayslip } from "@/hooks/payslip";
+import { usePayslip, PayslipData as PayslipItem } from "@/hooks/payslip";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
-
-interface PayslipLineItem {
-  name: string;
-  amount: string;
-}
-
-interface EmployeeInfo {
-  id: number;
-  first_name: string;
-  last_name: string;
-  full_name: string;
-  email: string;
-  contact: string;
-  position: string;
-  hire_date: string;
-}
-
-interface PayslipItem {
-  employee: EmployeeInfo;
-  payroll_run: number;
-  processed_at: string;
-  gross_earnings: string;
-  total_deductions: string;
-  net_salary: string;
-  earnings: PayslipLineItem[];
-  deductions: PayslipLineItem[];
-}
 
 function PayslipCard({
   payslip,
@@ -204,109 +177,177 @@ export default function PayslipPage() {
       const { default: jsPDF } = await import("jspdf");
       const doc = new jsPDF();
       const pageW = doc.internal.pageSize.getWidth();
-      let y = 20;
 
-      doc.setFillColor(30, 64, 175);
-      doc.rect(0, 0, pageW, 50, "F");
+      // Theme colors (matching --theme-primary: #522084)
+      const PURPLE: [number, number, number] = [82, 32, 132];
+      const PURPLE_BG: [number, number, number] = [245, 240, 252];
+      const GREEN: [number, number, number] = [22, 101, 52];
+      const GREEN_BG: [number, number, number] = [240, 253, 244];
+      const RED: [number, number, number] = [185, 28, 28];
+      const RED_BG: [number, number, number] = [255, 241, 242];
+
+      // ── Logo ──────────────────────────────────────────────────────────────
+      let logoDataUrl: string | null = null;
+      try {
+        const svgText = await fetch("/logo.svg").then((r) => r.text());
+        const blob = new Blob([svgText], { type: "image/svg+xml" });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.src = url;
+        await new Promise<void>((res, rej) => {
+          img.onload = () => res();
+          img.onerror = () => rej();
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = 554;
+        canvas.height = 428;
+        canvas.getContext("2d")!.drawImage(img, 0, 0);
+        logoDataUrl = canvas.toDataURL("image/png");
+        URL.revokeObjectURL(url);
+      } catch {
+        // continue without logo
+      }
+
+      // ── Header band ───────────────────────────────────────────────────────
+      const headerH = 56;
+      doc.setFillColor(...PURPLE);
+      doc.rect(0, 0, pageW, headerH, "F");
+
+      // White circle behind logo
+      if (logoDataUrl) {
+        doc.setFillColor(255, 255, 255);
+        doc.circle(28, 28, 20, "F");
+        doc.addImage(logoDataUrl, "PNG", 10, 10, 36, 36);
+      }
+
+      // Company name + payslip label
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(20);
+      const textX = logoDataUrl ? 55 : 14;
+      doc.setFontSize(18);
       doc.setFont("helvetica", "bold");
-      doc.text("PAYSLIP", pageW / 2, 16, { align: "center" });
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      doc.text(payslip.employee.full_name || `${payslip.employee.first_name} ${payslip.employee.last_name}`.trim(), pageW / 2, 27, { align: "center" });
+      doc.text("HULUCARS", textX, 22);
       doc.setFontSize(9);
-      doc.text(`${payslip.employee.position}  •  Payroll Run #${payslip.payroll_run}`, pageW / 2, 36, { align: "center" });
-      doc.text(`Processed: ${new Date(payslip.processed_at).toLocaleDateString()}`, pageW / 2, 44, { align: "center" });
-      y = 62;
+      doc.setFont("helvetica", "normal");
+      doc.text("PAYSLIP", textX, 31);
 
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(13);
+      // Run info on right
+      doc.setFontSize(9);
+      doc.text(`Payroll Run #${payslip.payroll_run}`, pageW - 14, 20, { align: "right" });
+      doc.text(
+        `Processed: ${new Date(payslip.processed_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`,
+        pageW - 14,
+        29,
+        { align: "right" }
+      );
+
+      let y = headerH + 10;
+
+      // ── Employee info box ─────────────────────────────────────────────────
+      const empName =
+        payslip.employee.full_name ||
+        `${payslip.employee.first_name} ${payslip.employee.last_name}`.trim();
+      const infoLines: string[] = [];
+      if (payslip.employee.email) infoLines.push(`Email: ${payslip.employee.email}`);
+      if (payslip.employee.contact) infoLines.push(`Contact: ${payslip.employee.contact}`);
+      if (payslip.employee.hire_date)
+        infoLines.push(
+          `Hire Date: ${new Date(payslip.employee.hire_date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`
+        );
+      const infoBoxH = 14 + infoLines.length * 7;
+
+      doc.setFillColor(...PURPLE_BG);
+      doc.roundedRect(14, y, pageW - 28, infoBoxH, 3, 3, "F");
+      doc.setDrawColor(...PURPLE);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(14, y, pageW - 28, infoBoxH, 3, 3, "S");
+
+      doc.setTextColor(...PURPLE);
+      doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(22, 101, 52);
+      doc.text(empName, 19, y + 9);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(80, 80, 80);
+      doc.text(payslip.employee.position, pageW - 19, y + 9, { align: "right" });
+
+      infoLines.forEach((line, i) => {
+        doc.text(line, 19, y + 16 + i * 7);
+      });
+
+      y += infoBoxH + 12;
+
+      // ── Earnings ──────────────────────────────────────────────────────────
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...GREEN);
       doc.text("Earnings", 14, y);
-      y += 6;
-      doc.setDrawColor(22, 101, 52);
+      y += 5;
+      doc.setDrawColor(...GREEN);
+      doc.setLineWidth(0.4);
       doc.line(14, y, pageW - 14, y);
-      y += 8;
+      y += 7;
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(40, 40, 40);
       payslip.earnings.forEach((item) => {
         doc.text(item.name, 18, y);
-        doc.text(
-          `ETB ${parseFloat(item.amount).toLocaleString()}`,
-          pageW - 14,
-          y,
-          { align: "right" }
-        );
+        doc.text(`ETB ${parseFloat(item.amount).toLocaleString()}`, pageW - 14, y, { align: "right" });
         y += 7;
       });
 
       doc.setFont("helvetica", "bold");
-      doc.setFillColor(240, 253, 244);
+      doc.setFillColor(...GREEN_BG);
       doc.roundedRect(14, y, pageW - 28, 10, 2, 2, "F");
-      doc.setTextColor(22, 101, 52);
+      doc.setTextColor(...GREEN);
       doc.text("Gross Earnings", 18, y + 7);
-      doc.text(
-        `ETB ${parseFloat(payslip.gross_earnings).toLocaleString()}`,
-        pageW - 14,
-        y + 7,
-        { align: "right" }
-      );
-      y += 20;
+      doc.text(`ETB ${parseFloat(payslip.gross_earnings).toLocaleString()}`, pageW - 14, y + 7, { align: "right" });
+      y += 18;
 
-      doc.setFontSize(13);
+      // ── Deductions ────────────────────────────────────────────────────────
+      doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(185, 28, 28);
+      doc.setTextColor(...RED);
       doc.text("Deductions", 14, y);
-      y += 6;
-      doc.setDrawColor(185, 28, 28);
+      y += 5;
+      doc.setDrawColor(...RED);
       doc.line(14, y, pageW - 14, y);
-      y += 8;
+      y += 7;
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(40, 40, 40);
       payslip.deductions.forEach((item) => {
         doc.text(item.name, 18, y);
-        doc.text(
-          `ETB ${parseFloat(item.amount).toLocaleString()}`,
-          pageW - 14,
-          y,
-          { align: "right" }
-        );
+        doc.text(`ETB ${parseFloat(item.amount).toLocaleString()}`, pageW - 14, y, { align: "right" });
         y += 7;
       });
 
       doc.setFont("helvetica", "bold");
-      doc.setFillColor(255, 241, 242);
+      doc.setFillColor(...RED_BG);
       doc.roundedRect(14, y, pageW - 28, 10, 2, 2, "F");
-      doc.setTextColor(185, 28, 28);
+      doc.setTextColor(...RED);
       doc.text("Total Deductions", 18, y + 7);
-      doc.text(
-        `ETB ${parseFloat(payslip.total_deductions).toLocaleString()}`,
-        pageW - 14,
-        y + 7,
-        { align: "right" }
-      );
-      y += 20;
+      doc.text(`ETB ${parseFloat(payslip.total_deductions).toLocaleString()}`, pageW - 14, y + 7, { align: "right" });
+      y += 18;
 
-      doc.setFillColor(30, 64, 175);
+      // ── Net Salary ────────────────────────────────────────────────────────
+      doc.setFillColor(...PURPLE);
       doc.roundedRect(14, y, pageW - 28, 16, 3, 3, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
       doc.text("Net Salary", 20, y + 11);
-      doc.text(
-        `ETB ${parseFloat(payslip.net_salary).toLocaleString()}`,
-        pageW - 20,
-        y + 11,
-        { align: "right" }
-      );
+      doc.text(`ETB ${parseFloat(payslip.net_salary).toLocaleString()}`, pageW - 20, y + 11, { align: "right" });
+      y += 28;
 
-      const safeName = (payslip.employee.full_name || `employee-${payslip.employee.id}`).replace(/\s+/g, "-").toLowerCase();
+      // ── Footer ────────────────────────────────────────────────────────────
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(160, 160, 160);
+      doc.text("Generated by Hulucars ERP System", pageW / 2, y, { align: "center" });
+
+      const safeName = empName.replace(/\s+/g, "-").toLowerCase() || `employee-${payslip.employee.id}`;
       doc.save(`payslip-${safeName}-run${payslip.payroll_run}.pdf`);
     } finally {
       setDownloadingIndex(null);

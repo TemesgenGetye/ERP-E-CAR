@@ -259,7 +259,7 @@ export interface CreateEmployeeRequest {
 
 export interface Attendance {
   id: number;
-  employee_email_display: string;
+  employee_email: string;
   employee_full_name: string;
   entry_time: string;
   exit_time: string;
@@ -271,7 +271,7 @@ export interface Attendance {
 }
 
 export interface CreateAttendanceRequest {
-  employee_email: string;
+  employee: number;
   entry_time: string;
   exit_time: string;
   date: string;

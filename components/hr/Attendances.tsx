@@ -59,10 +59,10 @@ export function AttendancesComponent({
   const { toast } = useToast();
 
   const [form, setForm] = useState<CreateAttendanceRequest>({
-    employee_email: "",
+    employee: 0,
     entry_time: "",
     exit_time: "",
-    date: new Date().toISOString().split("T")[0], // Default to today
+    date: new Date().toISOString().split("T")[0],
     status: "present",
     notes: "",
   });
@@ -79,13 +79,13 @@ export function AttendancesComponent({
   };
 
   // Quick action: Mark present with current time
-  const handleQuickPresent = async (employeeEmail: string) => {
+  const handleQuickPresent = async (employeeId: number) => {
     const now = getCurrentTime();
     const today = new Date().toISOString().split("T")[0];
 
     try {
       await createAttendance({
-        employee_email: employeeEmail,
+        employee: employeeId,
         entry_time: now,
         exit_time: now,
         date: today,
@@ -111,7 +111,7 @@ export function AttendancesComponent({
       setShowDialog(false);
       setEditingAttendance(null);
       setForm({
-        employee_email: "",
+        employee: 0,
         entry_time: "",
         exit_time: "",
         date: new Date().toISOString().split("T")[0],
@@ -136,8 +136,11 @@ export function AttendancesComponent({
       return isoString.slice(0, 16);
     };
 
+    const matched = employees.find(
+      (e) => e.login_email === attendance.employee_email || e.email === attendance.employee_email
+    );
     setForm({
-      employee_email: attendance.employee_email_display,
+      employee: matched?.id ?? 0,
       entry_time: formatDateTimeLocal(attendance.entry_time),
       exit_time: formatDateTimeLocal(attendance.exit_time),
       date: attendance.date,
@@ -230,25 +233,22 @@ export function AttendancesComponent({
             <form onSubmit={handleSubmit}>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="employee_email">Employee</Label>
+                  <Label htmlFor="employee">Employee</Label>
                   <Select
-                    value={form.employee_email}
+                    value={form.employee ? form.employee.toString() : ""}
                     onValueChange={(value) =>
-                      setForm({ ...form, employee_email: value })
+                      setForm({ ...form, employee: parseInt(value) })
                     }
                     required
                     disabled={!!editingAttendance}
                   >
-                    <SelectTrigger id="employee_email">
+                    <SelectTrigger id="employee">
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
                     <SelectContent>
                       {employees.map((emp) => (
-                        <SelectItem
-                          key={emp.id}
-                          value={emp.login_email}
-                        >
-                          {emp.full_name} — {emp.position}
+                        <SelectItem key={emp.id} value={emp.id.toString()}>
+                          {emp.full_name || emp.login_email || emp.email} — {emp.position}
                         </SelectItem>
                       ))}
                     </SelectContent>

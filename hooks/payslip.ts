@@ -8,8 +8,21 @@ interface PayslipLineItem {
   amount: string;
 }
 
-interface PayslipData {
-  employee: number;
+interface EmployeeInfo {
+  id: number;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  email: string;
+  contact: string;
+  position: string;
+  hire_date: string;
+}
+
+export interface PayslipData {
+  employee: EmployeeInfo;
+  payroll_run: number;
+  processed_at: string;
   gross_earnings: string;
   total_deductions: string;
   net_salary: string;

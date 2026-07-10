@@ -327,7 +327,7 @@ export default function StaffPage() {
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent className="z-[50001]">
-                      <SelectItem value="seller">Seller</SelectItem>
+                      <SelectItem value="seller">Sales</SelectItem>
                       <SelectItem value="accountant">Accountant</SelectItem>
                       <SelectItem value="hr">HR</SelectItem>
                       <SelectItem value="finance">Finance</SelectItem>

@@ -97,7 +97,7 @@ export function ChecklistAttendanceComponent({
 
     // Build attendance data structure
     monthAttendances.forEach((att) => {
-      const email = att.employee_email_display;
+      const email = att.employee_email;
       if (!data[email]) {
         data[email] = {};
       }
@@ -113,11 +113,12 @@ export function ChecklistAttendanceComponent({
 
   // Handle checkbox change
   const handleCheckboxChange = async (
+    employeeId: number,
     employeeEmail: string,
     day: number,
     checked: boolean,
   ) => {
-    if (!employeeEmail) return;
+    if (!employeeId) return;
     const date = formatDate(day);
     const cellKey = `${employeeEmail}-${date}`;
     const existingAttendance = attendanceData[employeeEmail]?.[date];
@@ -142,7 +143,7 @@ export function ChecklistAttendanceComponent({
         const defaultExitTime = `${date}T17:00`;
 
         await createAttendance({
-          employee_email: employeeEmail,
+          employee: employeeId,
           entry_time: defaultEntryTime,
           exit_time: defaultExitTime,
           date: date,
@@ -152,7 +153,7 @@ export function ChecklistAttendanceComponent({
         toast({
           title: "Attendance saved",
           variant: "success",
-          description: `${employeeEmail} marked present for ${date}`,
+          description: `Marked present for ${date}`,
         });
       } else {
         // Delete the attendance record if it exists
@@ -333,6 +334,7 @@ export function ChecklistAttendanceComponent({
                                   }
                                   onCheckedChange={(checked) =>
                                     handleCheckboxChange(
+                                      employee.id,
                                       employeeEmail,
                                       day,
                                       checked as boolean,
