@@ -251,7 +251,7 @@ export const getPayrollRuns = async () => {
 export const createPayrollRun = async (period: string) => {
   const credential = await getCredentials();
   const { access } = credential;
-  const response = await fetch(`${API_URL}/payroll/payroll-runs`, {
+  const response = await fetch(`${API_URL}/payroll/payroll-runs/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
