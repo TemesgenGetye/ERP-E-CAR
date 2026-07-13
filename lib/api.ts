@@ -275,7 +275,13 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
 
   const contentType = res.headers.get("content-type");
   if (contentType && contentType.includes("application/json")) {
-    return res.json();
+    const text = await res.text();
+    if (!text.trim()) return {} as T;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return {} as T;
+    }
   }
 
   return {} as T;

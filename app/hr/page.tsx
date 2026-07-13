@@ -18,13 +18,13 @@ import { ContractsComponent } from "@/components/hr/Contracts";
 import { LeavesComponent } from "@/components/hr/Leaves";
 import { SalaryComponent } from "@/components/hr/Salary";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useLeaves } from "@/hooks/leaves";
 
 export default function HRPage() {
   const {
     employees,
     attendances,
     contracts,
-    leaves,
     isLoading,
     error,
     createEmployee,
@@ -44,6 +44,8 @@ export default function HRPage() {
     deleteLeave,
   } = useHR();
 
+  const { leaves } = useLeaves();
+
   const { isLoading: isUserRoleLoading } = useUserRole();
 
 
@@ -52,8 +54,7 @@ export default function HRPage() {
     isLoading &&
     employees.length === 0 &&
     attendances.length === 0 &&
-    contracts.length === 0 &&
-    leaves.length === 0;
+    contracts.length === 0;
 
   if (isInitialLoad) {
     return (
@@ -229,7 +230,6 @@ export default function HRPage() {
 
           <TabsContent value="leaves">
             <LeavesComponent
-              leaves={leaves}
               employees={employees}
               createLeave={createLeave}
               updateLeave={updateLeave}

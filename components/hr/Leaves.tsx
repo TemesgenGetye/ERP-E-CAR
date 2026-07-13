@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit, Trash2, MoreHorizontal } from "lucide-react";
+import { Plus, Edit, Trash2, MoreHorizontal, Check, X } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,10 +32,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Leave, CreateLeaveRequest, HREmployee } from "@/types";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
+import { useLeaves } from "@/hooks/leaves";
 
 interface LeavesProps {
-  leaves: Leave[];
   employees: HREmployee[];
   createLeave: (leave: CreateLeaveRequest) => Promise<void>;
   updateLeave: (id: number, leave: Partial<CreateLeaveRequest>) => Promise<void>;
@@ -42,12 +43,16 @@ interface LeavesProps {
 }
 
 export function LeavesComponent({
-  leaves,
   employees,
   createLeave,
   updateLeave,
   deleteLeave,
 }: LeavesProps) {
+  const { role } = useUserRole();
+  const isHR = role === "hr";
+  const { toast } = useToast();
+  const { leaves, approveLeave, rejectLeave } = useLeaves();
+
   const [showDialog, setShowDialog] = useState(false);
   const [editingLeave, setEditingLeave] = useState<Leave | null>(null);
 
@@ -80,7 +85,7 @@ export function LeavesComponent({
       });
     } catch (error) {
       console.error("Error saving leave:", error);
-      toast.error("Failed to save leave request. Please try again.");
+      toast({ variant: "destructive", title: "Failed to save leave request", description: "Please try again." });
     }
   };
 
@@ -103,7 +108,7 @@ export function LeavesComponent({
         await deleteLeave(id);
       } catch (error) {
         console.error("Error deleting leave:", error);
-        toast.error("Failed to delete leave request. Please try again.");
+        toast({ variant: "destructive", title: "Failed to delete leave request", description: "Please try again." });
       }
     }
   };
@@ -316,26 +321,50 @@ export function LeavesComponent({
                       )}
                     </td>
                     <td className="p-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(leave)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(leave.id)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div className="flex items-center justify-end gap-1">
+                        {isHR && leave.status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="cursor-pointer h-8 text-green-700 hover:text-green-700 hover:bg-green-50 gap-1 px-2"
+                              onClick={() => approveLeave(leave.id)}
+                            >
+                              <Check className="h-4 w-4" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="cursor-pointer h-8 text-red-600 hover:text-red-600 hover:bg-red-50 gap-1 px-2"
+                              onClick={() => rejectLeave(leave.id)}
+                            >
+                              <X className="h-4 w-4" />
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(leave)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(leave.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </td>
                   </tr>
                 ))
