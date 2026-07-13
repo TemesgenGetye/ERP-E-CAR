@@ -96,6 +96,9 @@ export function EmployeesComponent({
     approved: true,
     date: "",
   });
+  const [editingOvertimeEntry, setEditingOvertimeEntry] = useState<HROvertimeEntry | null>(null);
+  const [deleteOvertimeTargetId, setDeleteOvertimeTargetId] = useState<number | null>(null);
+  const [isDeletingOvertime, setIsDeletingOvertime] = useState(false);
   const [isOvertimeSubmitting, setIsOvertimeSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
@@ -275,6 +278,7 @@ export function EmployeesComponent({
 
   const handleCreateOvertime = (employee: HREmployee) => {
     setSelectedEmployee(employee);
+    setEditingOvertimeEntry(null);
     setOvertimeForm({
       overtime_type: "1.5",
       hours: "",
@@ -284,39 +288,64 @@ export function EmployeesComponent({
     setShowOvertimeDialog(true);
   };
 
+  const handleEditOvertimeEntry = (employee: HREmployee, entry: HROvertimeEntry) => {
+    setSelectedEmployee(employee);
+    setEditingOvertimeEntry(entry);
+    setOvertimeForm({
+      overtime_type: entry.overtime_type,
+      hours: entry.hours,
+      approved: entry.approved,
+      date: entry.date,
+    });
+    setShowOvertimeDialog(true);
+  };
+
+  const handleDeleteOvertimeEntry = async () => {
+    if (!deleteOvertimeTargetId) return;
+    setIsDeletingOvertime(true);
+    try {
+      await api(`/hr/overtime/${deleteOvertimeTargetId}/`, { method: "DELETE" });
+      setDeleteOvertimeTargetId(null);
+      await getEmployees();
+      toast({ title: "Success", description: "Overtime entry deleted.", variant: "success" });
+    } catch {
+      toast({ title: "Error", description: "Failed to delete overtime entry.", variant: "destructive" });
+    } finally {
+      setIsDeletingOvertime(false);
+    }
+  };
+
   const handleOvertimeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEmployee || !overtimeForm.hours || !overtimeForm.date) return;
     setIsOvertimeSubmitting(true);
     try {
-      await api("/hr/overtime/", {
-        method: "POST",
-        body: {
-          employee: selectedEmployee.id,
-          overtime_type: overtimeForm.overtime_type,
-          hours: overtimeForm.hours,
-          approved: overtimeForm.approved,
-          date: overtimeForm.date,
-        },
-        headers: { "Content-Type": "application/json" },
-      } as any);
+      const body = {
+        employee: selectedEmployee.id,
+        overtime_type: overtimeForm.overtime_type,
+        hours: overtimeForm.hours,
+        approved: overtimeForm.approved,
+        date: overtimeForm.date,
+      };
+      if (editingOvertimeEntry) {
+        await api(`/hr/overtime/${editingOvertimeEntry.id}/`, { method: "PATCH", body } as any);
+      } else {
+        await api("/hr/overtime/", { method: "POST", body } as any);
+      }
       setShowOvertimeDialog(false);
       setSelectedEmployee(null);
-      setOvertimeForm({
-        overtime_type: "1.5",
-        hours: "",
-        approved: true,
-        date: "",
-      });
+      setEditingOvertimeEntry(null);
+      setOvertimeForm({ overtime_type: "1.5", hours: "", approved: true, date: "" });
+      await getEmployees();
       toast({
         title: "Success",
-        description: "Overtime created successfully!",
+        description: editingOvertimeEntry ? "Overtime updated successfully!" : "Overtime created successfully!",
         variant: "success",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to create overtime.",
+        description: editingOvertimeEntry ? "Failed to update overtime." : "Failed to create overtime.",
         variant: "destructive",
       });
     } finally {
@@ -590,6 +619,18 @@ export function EmployeesComponent({
                               <span className={`text-xs font-medium ${entry.approved ? "text-green-600" : "text-yellow-600"}`}>
                                 {entry.approved ? "Approved" : "Pending"}
                               </span>
+                              <button
+                                onClick={() => handleEditOvertimeEntry(employee, entry)}
+                                className="text-muted-foreground hover:text-primary cursor-pointer"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteOvertimeTargetId(entry.id)}
+                                className="text-muted-foreground hover:text-red-500 cursor-pointer"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -711,12 +752,12 @@ export function EmployeesComponent({
       </Dialog>
 
       {/* Overtime Dialog */}
-      <Dialog open={showOvertimeDialog} onOpenChange={setShowOvertimeDialog}>
+      <Dialog open={showOvertimeDialog} onOpenChange={(open) => { setShowOvertimeDialog(open); if (!open) setEditingOvertimeEntry(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Overtime</DialogTitle>
+            <DialogTitle>{editingOvertimeEntry ? "Edit Overtime" : "Create Overtime"}</DialogTitle>
             <DialogDescription>
-              Create overtime record for {selectedEmployee?.full_name ?? ""}
+              {editingOvertimeEntry ? "Update overtime record for" : "Create overtime record for"} {selectedEmployee?.full_name ?? ""}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleOvertimeSubmit}>
@@ -786,7 +827,9 @@ export function EmployeesComponent({
                 Cancel
               </Button>
               <Button type="submit" disabled={isOvertimeSubmitting}>
-                {isOvertimeSubmitting ? "Creating..." : "Create Overtime"}
+                {isOvertimeSubmitting
+                  ? (editingOvertimeEntry ? "Updating..." : "Creating...")
+                  : (editingOvertimeEntry ? "Update Overtime" : "Create Overtime")}
               </Button>
             </DialogFooter>
           </form>
@@ -797,6 +840,13 @@ export function EmployeesComponent({
         open={deleteTargetId !== null}
         onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}
         onConfirm={handleConfirmDelete}
+      />
+
+      <DeleteConfirmDialog
+        open={deleteOvertimeTargetId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteOvertimeTargetId(null); }}
+        onConfirm={handleDeleteOvertimeEntry}
+        isLoading={isDeletingOvertime}
       />
     </Card>
   );

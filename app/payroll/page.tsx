@@ -64,6 +64,7 @@ import type { EmployeeSalaryAssignment } from "@/lib/payroll";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePayrollRuns } from "@/hooks/payrollRuns";
 import { Badge } from "@/components/ui/badge";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import {
   Play,
   CheckCircle,
@@ -231,6 +232,8 @@ function HRPayrollContent() {
   const [isLoadingOvertime, setIsLoadingOvertime] = useState(false);
   const [showOvertimeDialog, setShowOvertimeDialog] = useState(false);
   const [editingOvertime, setEditingOvertime] = useState<Overtime | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [overtimeForm, setOvertimeForm] = useState({
     overtime_type: "1.5",
     hours: "",
@@ -487,19 +490,17 @@ function HRPayrollContent() {
   };
 
   // Delete Overtime Entry
-  const handleDeleteOvertime = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this overtime entry?")) {
-      return;
-    }
+  const handleDeleteOvertime = async () => {
+    if (!deleteTargetId) return;
+    setIsDeleting(true);
     try {
-      await api(`/hr/overtime/${id}/`, {
-        method: "DELETE",
-      });
+      await api(`/hr/overtime/${deleteTargetId}/`, { method: "DELETE" });
       toast({
         title: "Success",
         description: "Overtime entry deleted successfully",
         variant: "success",
       });
+      setDeleteTargetId(null);
       fetchOvertime();
     } catch (error: any) {
       toast({
@@ -507,6 +508,8 @@ function HRPayrollContent() {
         description: error.message || "Failed to delete overtime entry",
         variant: "destructive",
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1249,9 +1252,7 @@ function HRPayrollContent() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() =>
-                                        handleDeleteOvertime(entry.id)
-                                      }
+                                      onClick={() => setDeleteTargetId(entry.id)}
                                     >
                                       <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
@@ -1270,6 +1271,13 @@ function HRPayrollContent() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <DeleteConfirmDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}
+        onConfirm={handleDeleteOvertime}
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

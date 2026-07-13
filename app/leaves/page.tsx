@@ -214,7 +214,6 @@ export default function EmployeeLeavesPage() {
 
       {userRole === "hr" ? (
         <LeavesComponent
-          leaves={leaves}
           employees={employees}
           createLeave={createLeave}
           updateLeave={updateLeave}
